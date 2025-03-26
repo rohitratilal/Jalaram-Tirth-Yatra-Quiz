@@ -3,27 +3,117 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Jalaram Tirth Yatra</title>
+    <title>Quiz Game with Team Scoring</title>
     <style>
-        body {
-            font-family: Arial, sans-serif;
-            padding: 20px;
-            max-width: 800px;
-            margin: 0 auto;
-            background-color: #f0f8ff;
+        :root {
+            --primary: #4CAF50;
+            --secondary: #2196F3;
+            --danger: #f44336;
+            --background: #f8f9fa;
         }
 
+        body {
+            font-family: 'Segoe UI', system-ui, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: var(--background);
+            min-height: 100vh;
+        }
+
+        .container {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 30px;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .scoring-section {
+            background: white;
+            padding: 25px;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+        }
+
+        .quiz-section {
+            background: white;
+            padding: 25px;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+        }
+
+        .team {
+            padding: 15px;
+            margin-bottom: 15px;
+            border-radius: 8px;
+            background: #fff;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .team-name {
+            flex: 1;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+        }
+
+        .team-score {
+            font-size: 24px;
+            font-weight: 700;
+            min-width: 60px;
+            text-align: center;
+        }
+
+        .score-controls {
+            display: flex;
+            gap: 8px;
+        }
+
+        button {
+            border: none;
+            padding: 8px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.2s ease;
+        }
+
+        .add-team-btn {
+            background: var(--secondary);
+            color: white;
+            width: 100%;
+            padding: 12px;
+            margin-top: 10px;
+        }
+
+        .plus-btn { background: var(--primary); color: white; }
+        .minus-btn { background: var(--danger); color: white; }
+        .neutral-btn { background: #e0e0e0; color: #333; }
+
+        h1, h2 {
+            margin: 0 0 20px 0;
+            color: #333;
+        }
+
+        #questionNum {
+            width: 100%;
+            margin-bottom: 15px;
+            padding: 12px;
+            border: 2px solid var(--primary);
+            border-radius: 8px;
+            font-size: 16px;
+        }
+
+        /* Quiz specific styles */
         #questionContainer {
             margin-top: 20px;
-            padding: 20px;
-            border: 2px solid #4CAF50;
-            border-radius: 10px;
-            background-color: white;
-            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
         }
 
         .option {
-            margin: 10px;
+            margin: 10px 0;
             padding: 15px;
             border: 2px solid #ddd;
             border-radius: 8px;
@@ -38,32 +128,12 @@
 
         #timer {
             font-size: 1.5em;
-            color: #ff4444;
+            color: var(--danger);
             margin: 15px 0;
             font-weight: bold;
         }
 
-        input {
-            padding: 12px;
-            width: 250px;
-            border: 2px solid #4CAF50;
-            border-radius: 8px;
-            font-size: 16px;
-        }
-
-        .language-toggle {
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            padding: 10px 20px;
-            cursor: pointer;
-            background-color: #4CAF50;
-            color: white;
-            border: none;
-            border-radius: 5px;
-            font-weight: bold;
-        }
-
+        /* Animations */
         @keyframes flowing-green {
             0% { background-position: 0% 50%; }
             50% { background-position: 100% 50%; }
@@ -95,66 +165,461 @@
         }
 
         .wrong-answer {
-            background-color: #ff4444 !important;
+            background-color: var(--danger) !important;
             color: white;
             border-color: #cc0000 !important;
-        }
-
-        h1 {
-            color: #2c3e50;
-            text-align: center;
-            margin-bottom: 30px;
         }
     </style>
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.5.1/dist/confetti.browser.min.js"></script>
 </head>
 <body>
-    <h1>ॐ Jalaram Tirth Yatra ॐ</h1>
-    <button class="language-toggle" onclick="toggleLanguage()">Toggle Language/ભાષા બદલો</button>
-    <input type="number" id="questionNum" placeholder="Enter question number/પ્રશ્ન નંબર દાખલ કરો" min="1">
-    <div id="timer"></div>
-    <div id="questionContainer"></div>
+    <div class="container">
+        <div class="scoring-section">
+            <h2>🏆 Team Scores</h2>
+            <div id="teamsContainer"></div>
+            <button class="add-team-btn" onclick="addTeam()">➕ Add Team</button>
+        </div>
+
+        <div class="quiz-section">
+            <h1>📚 Knowledge Quiz</h1>
+            <input type="number" id="questionNum" placeholder="Enter question number" min="1">
+            <div id="timer"></div>
+            <div id="questionContainer"></div>
+        </div>
+    </div>
 
     <script>
-        let currentLanguage = 'en';
-        const questions = {
-            1: {
-                en: {
-                    question: "Where was Lord Krishna born?",
-                    options: ["Mathura", "Dwarka", "Gokul", "Vrindavan"],
-                    answer: 0
-                },
-                gu: {
-                    question: "ભગવાન કૃષ્ણનો જન્મ ક્યાં થયો હતો?",
-                    options: ["મથુરા", "દ્વારકા", "ગોકુળ", "વૃંદાવન"],
-                    answer: 0
-                }
-            },
-            40: {
-                en: {
-                    question: "Which god's birthday is Ganesh Chaturthi?",
-                    options: ["Vishnu", "Shiva", "Ganesh", "Hanuman"],
-                    answer: 2
-                },
-                gu: {
-                    question: "ગણેશ ચતુર્થી કયા ભગવાનનો જન્મોત્સવ છે?",
-                    options: ["વિષ્ણુ", "શિવ", "ગણેશ", "હનુમાન"],
-                    answer: 2
-                }
+        // Team scoring system
+        let teams = [];
+        let nextTeamId = 1;
+
+        function addTeam(name = `Team ${nextTeamId}`) {
+            const team = {
+                id: nextTeamId++,
+                name: name,
+                score: 0
+            };
+            teams.push(team);
+            renderTeams();
+        }
+
+        function updateScore(teamId, points) {
+            const team = teams.find(t => t.id === teamId);
+            if (team) {
+                team.score += points;
+                renderTeams();
             }
-            // Add more questions in this format
-        };
+        }
+
+        function updateTeamName(teamId, newName) {
+            const team = teams.find(t => t.id === teamId);
+            if (team) team.name = newName;
+        }
+
+        function renderTeams() {
+            const container = document.getElementById('teamsContainer');
+            container.innerHTML = teams.map(team => `
+                <div class="team">
+                    <input class="team-name" 
+                           value="${team.name}" 
+                           onchange="updateTeamName(${team.id}, this.value)">
+                    <div class="team-score">${team.score}</div>
+                    <div class="score-controls">
+                        <button class="plus-btn" onclick="updateScore(${team.id}, 10)">+10</button>
+                        <button class="plus-btn" onclick="updateScore(${team.id}, 5)">+5</button>
+                        <button class="minus-btn" onclick="updateScore(${team.id}, -5)">-5</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // Initialize with 2 teams
+        addTeam();
+        addTeam();
+
+        // Quiz functionality
+        const questions = {
+    "1": {
+      "question": "Bhagwan Krishna nu janm kyā thayu hatu?",
+      "options": ["Mathura", "Dwarka", "Gokul", "Vrindavan"],
+      "answer": 0
+    },
+    "2": {
+      "question": "Kans na keṭla bhai-baheno hata je Krishna na shatrupanu karata hata?",
+      "options": ["2", "4", "6", "8"],
+      "answer": 3
+    },
+    "3": {
+      "question": "Bhagwan Krishna na pita Vasudev kyā vansh na hata?",
+      "options": ["Yadu Vansh", "Ikshvaku Vansh", "Haihay Vansh", "Puru Vansh"],
+      "answer": 0
+    },
+    "4": {
+      "question": "Kans e Devki na ketla santano ne maari nakhya hata?",
+      "options": ["4", "6", "7", "8"],
+      "answer": 1
+    },
+    "5": {
+      "question": "Krishna e kai daitya stri ne mari ne Gokul ne bachavyu hatu?",
+      "options": ["Holika", "Putana", "Trijata", "Surpanakha"],
+      "answer": 1
+    },
+    "6": {
+      "question": "Kansa ne maarva pachi Krishna e kyā raja nu takht sambharyu hatu?",
+      "options": ["Mathura", "Dwarka", "Indraprastha", "Hastinapur"],
+      "answer": 0
+    },
+    "7": {
+      "question": "Bhagwan Krishna e Govardhan Parvat kyā divas ughami rakhyo hato?",
+      "options": ["3 divas", "5 divas", "7 divas", "9 divas"],
+      "answer": 2
+    },
+    "8": {
+      "question": "Rukmini e Krishna ne kyā thi bhagavi ne lagan karyu hatu?",
+      "options": ["Vidarbha", "Mathura", "Dwarka", "Hastinapur"],
+      "answer": 0
+    },
+    "9": {
+      "question": "Bhagwan Krishna e Mahabharat na yuddh ma Arjun ne kyā updesh aapyo hato?",
+      "options": ["Vishnu Puran", "Bhagavad Gita", "Srimad Bhagavatam", "Yajur Veda"],
+      "answer": 1
+    },
+    "10": {
+      "question": "Krishna e kai rani saathe sathvaro (Raas Leela) vadhare karyo hato?",
+      "options": ["Rukmini", "Satyabhama", "Radha", "Jambvati"],
+      "answer": 2
+    },
+    "11": {
+      "question": "Vishnu Puran ma ketla adhyaay che?",
+      "options": ["50", "100", "126", "200"],
+      "answer": 2
+    },
+    "12": {
+      "question": "Vishnu Puran pramane kayu yug lamboo che?",
+      "options": ["Kali Yug", "Treta Yug", "Dwapar Yug", "Satya Yug"],
+      "answer": 3
+    },
+    "13": {
+      "question": "Kali Yug na antim samay ma Vishnu bhagwan no kayu avatar aavshe?",
+      "options": ["Matsya", "Kalki", "Ram", "Krishna"],
+      "answer": 1
+    },
+    "14": {
+      "question": "Vishnu Bhagwan ni patni kon che?",
+      "options": ["Saraswati", "Parvati", "Lakshmi", "Radha"],
+      "answer": 2
+    },
+    "15": {
+      "question": "Vishnu Bhagwan ye varaha avatar ma kaya rakshas ne maaro hato?",
+      "options": ["Hiranyakashipu", "Hiranyaksha", "Ravan", "Kumbhakarna"],
+      "answer": 1
+    },
+    "16": {
+      "question": "Vishnu Puran sathe, total ketla Puran che?",
+      "options": ["10", "12", "18", "24"],
+      "answer": 2
+    },
+    "17": {
+      "question": "Vishnu Puran na rachayita kon che?",
+      "options": ["Narad", "Veda Vyaas", "Valmiki", "Agastya"],
+      "answer": 1
+    },
+    "18": {
+      "question": "Aa ma thi kayu Vishnu Bhagwan nu avatar nathi?",
+      "options": ["Vaman", "Buddha", "Kurma", "Hanuman"],
+      "answer": 3
+    },
+    "19": {
+      "question": "Vishnu Puran anusar kay nadi vadhare pavitra che?",
+      "options": ["Saraswati", "Ganga", "Yamuna", "Narmada"],
+      "answer": 1
+    },
+    "20": {
+      "question": "Vishnu Puran anusar Vishnu Bhagwan kaya yug ma Prithvi par Krishna avatar ma avya hata?",
+      "options": ["Treta Yug", "Dwapar Yug", "Satya Yug", "Kali Yug"],
+      "answer": 1
+    },
+    "21": {
+      "question": "Vishnu Puran pramane Bhagwan Vishnu nu asli nivas kya che?",
+      "options": ["Kailas Parvat", "Vaikunth", "Swarg Lok", "Brahmalok"],
+      "answer": 1
+    },
+    "22": {
+      "question": "Kans ne kay rishi dwara aashirvaad ma shraap malyo hato?",
+      "options": ["Garg Rishi", "Narad Muni", "Durvasa Rishi", "Akashvani (divya aawaz)"],
+      "answer": 3
+    },
+    "23": {
+      "question": "Krishna Bhagwan ne kyun mata ne garbh ma janm lidho?",
+      "options": ["Mata Yashoda", "Mata Kunti", "Mata Devaki", "Mata Rohini"],
+      "answer": 2
+    },
+    "24": {
+      "question": "Kans e Krishna Bhagwan ne maarva mate kay rakshaso ne mokalya hata?",
+      "options": ["Putana", "Trinavarta", "Bakasur", "Aakhana badha (all of the above)"],
+      "answer": 3
+    },
+    "25": {
+      "question": "Krishna Bhagwan e Gokul ma kay rashi upar naach karyo hato?",
+      "options": ["Mor pankh", "Kalindi nadi", "Kaliya naag na mastak par", "Govardhan parvat par"],
+      "answer": 2
+    },
+    "26": {
+      "question": "Krishna Bhagwan e kay parvat ne ungli par uthavyo hato?",
+      "options": ["Kailas parvat", "Himalaya", "Govardhan parvat", "Vindhyachal"],
+      "answer": 2
+    },
+    "27": {
+      "question": "Krishna Bhagwan no saacho mitra kayu hato?",
+      "options": ["Balram", "Sudama", "Arjun", "Uddhav"],
+      "answer": 1
+    },
+    "28": {
+      "question": "Krishna Bhagwan ni Rasa-Leela kyare varnit thai chhe?",
+      "options": ["Krishna na balpan ma", "Yuvavastha ma", "Vanvaas ma", "Mahabharat yuddh pachi"],
+      "answer": 0
+    },
+    "29": {
+      "question": "Krishna Bhagwan e Dwarika ni sthapna kyare kari?",
+      "options": ["Kansa ne maarva pachi", "Govardhan puja pachi", "Putana ne maarva pachi", "Mahabharat yuddh ni shuruaat ma"],
+      "answer": 0
+    },
+    "30": {
+      "question": "Matsya avatar ma Bhagwan e kyane raksha kari hati?",
+      "options": ["Manu ane vedo", "Raja Bali", "Prithvi Devi", "Gajendra"],
+      "answer": 0
+    },
+    "31": {
+      "question": "Kurma avatar ma Bhagwan e kay kriya ma sahay kari hati?",
+      "options": ["Yagna", "Amrut manthan", "Tapasya", "Daan"],
+      "answer": 1
+    },
+    "32": {
+      "question": "Varaha avatar ma Bhagwan e Prithvi ne kyathi bachavi hati?",
+      "options": ["Ksheer Sagar maathi", "Pataal maathi", "Himalaya par", "Brahmand maathi"],
+      "answer": 1
+    },
+    "33": {
+      "question": "Narasimha avatar ma Bhagwan e kay raja ne maaro hato?",
+      "options": ["Hiranyakashyap", "Ravana", "Kans", "Duryodhan"],
+      "answer": 0
+    },
+    "34": {
+      "question": "Vaman avatar ma Bhagwan e kay raja ne teen pag ma naapyo hato?",
+      "options": ["Raja Bali", "Raja Harishchandra", "Raja Parikshit", "Raja Janak"],
+      "answer": 0
+    },
+    "35": {
+      "question": "Parshuram avatar e kay shastra dharan karyu hatu?",
+      "options": ["Trishul", "Talwar", "Parshu (kulhadi)", "Dhanush"],
+      "answer": 2
+    },
+    "36": {
+      "question": "Ram avatar ma Bhagwan ni patni nu naam shu hatu?",
+      "options": ["Radha", "Draupadi", "Sita", "Rukmini"],
+      "answer": 2
+    },
+    "37": {
+      "question": "Krishna avatar ma Bhagwan na pehla bhai nu naam shu hatu?",
+      "options": ["Sheshnag", "Balram", "Uddhav", "Sudama"],
+      "answer": 1
+    },
+    "38": {
+      "question": "Buddha avatar ma Bhagwan Vishnu e su sandesh aapyo hato?",
+      "options": ["Karm karo", "Satya no paath", "Ahinsa ane daya", "Shakti aradhana"],
+      "answer": 2
+    },
+    "39": {
+      "question": "Kalki avatar kyare aavshe?",
+      "options": ["Satya Yug", "Treta Yug", "Dwapar Yug", "Kaliyug na ant ma"],
+      "answer": 3
+    },
+    "40": {
+      "question": "ગણેશ ચતુર્થી કયા ભગવાનનો જન્મોત્સવ છે?",
+      "options": ["વિષ્ણુ", "શિવ", "ગણેશ", "હનુમાન"],
+      "answer": 2
+    },
+    "41": {
+      "question": "ગણેશજીના માતા-પિતા કોણ છે?",
+      "options": ["શિવ અને પાર્વતી", "વિષ્ણુ અને લક્ષ્મી", "બ્રહ્મા અને સરસ્વતી", "ઇન્દ્ર અને અહલ્યા"],
+      "answer": 0
+    },
+    "42": {
+      "question": "ગણેશજીનો વાહન કયો છે?",
+      "options": ["હાથી", "મોષક", "સિંહ", "ઉંટ"],
+      "answer": 1
+    },
+    "43": {
+      "question": "ગણેશ ચતુર્થીને બીજા ક્યા નામથી ઓળખાય છે?",
+      "options": ["વિનાયક ચતુર્થી", "શિવરાત્રિ", "હનુમાન જયંતી", "કૃષ્ણાષ્ટમી"],
+      "answer": 0
+    },
+    "44": {
+      "question": "ગણેશજીને કઈ મીઠાઈ પ્રિય છે?",
+      "options": ["લાડુ", "જલેબી", "રસ્મલાઈ", "પેડા"],
+      "answer": 0
+    },
+    "45": {
+      "question": "ગણેશજીને કઈ મૂર્ખતા માટે પ્રસિદ્ધ છે?",
+      "options": ["બુદ્ધિ અને જ્ઞાન", "યોદ્ધા શક્તિ", "નૃત્ય", "સંગીત"],
+      "answer": 0
+    },
+    "46": {
+      "question": "ગણેશ ચતુર્થીનો તહેવાર મુખ્યત્વે ક્યાં ઉજવાય છે?",
+      "options": ["ગુજરાત", "મહારાષ્ટ્ર", "પંજાબ", "તામિલનાડુ"],
+      "answer": 1
+    },
+    "47": {
+      "question": "ગણેશજીના ભાઈનું નામ શું છે?",
+      "options": ["કાર્તિકેય", "ભદ્રકાલી", "રામ", "હનુમાન"],
+      "answer": 0
+    },
+    "48": {
+      "question": "ગણેશ ચતુર્થી કેટલા દિવસ સુધી ઉજવાય છે?",
+      "options": ["1 દિવસ", "5 દિવસ", "10 દિવસ", "15 દિવસ"],
+      "answer": 2
+    },
+    "49": {
+      "question": "ગણેશ ચતુર્થીનો સમાપન કયા દિવસ થાય છે?",
+      "options": ["હોળી", "દશેરા", "અનંત ચતુર્દશી", "દિવાળી"],
+      "answer": 2
+    },
+    "50": {
+      "question": "Shiv Puran pramane kay lok ma Shiv Bhagwan nivas kare che?",
+      "options": ["Swarg", "Patal", "Kailash", "Vaikunth"],
+      "answer": 2
+    },
+    "51": {
+      "question": "Shiv Puran pramane kay raja Shiv Bhagwan na bhakt hata?",
+      "options": ["Harishchandra", "Dasharath", "Chandragupt", "Ravana"],
+      "answer": 3
+    },
+    "52": {
+      "question": "Shiv Puran anusar Shiv Bhagwan ni kay shivling Jyotirling manvama ave che?",
+      "options": ["Gangeshwar", "Kedareshwar", "Mallikarjun", "Krishneshwar"],
+      "answer": 2
+    },
+    "53": {
+      "question": "Shiv Puran anusar Nandi na pita nu nam su che?",
+      "options": ["Vasishtha Rushi", "Shilad Rushi", "Kashyap Rushi", "Atri Rushi"],
+      "answer": 1
+    },
+    "54": {
+      "question": "Bhawan Shiv na ketla nam che?",
+      "options": ["108", "125", "1000", "1008"],
+      "answer": 0
+    },
+    "55": {
+      "question": "Bhawan Shiv ni Jhata ma kono vas che?",
+      "options": ["Narmada", "Saraswati", "Ganga", "Yamuna"],
+      "answer": 2
+    },
+    "56": {
+      "question": "Shiv Bhagwan ni puja ma kay vastu nathi vaprati?",
+      "options": ["Chandan", "Tulsi", "Dudh", "Bilipatra"],
+      "answer": 1
+    },
+    "57": {
+      "question": "Mata Sati na ant pasi Shiv bhagwan ve krodh ma avi ne kayu roop dharan karelu?",
+      "options": ["Bhairav", "Veerabhadra", "Natraj", "Durvasa"],
+      "answer": 1
+    },
+    "58": {
+      "question": "Maa Ganga ne swarglok mathi pruthvi par kon lavyu hatu?",
+      "options": ["Mahadev", "Bhagirath", "Brahmadev", "Narad muni"],
+      "answer": 1
+    },
+    "59": {
+      "question": "Mata Parvati na pita nu nam su hatu?",
+      "options": ["Kashyap Rushi", "Daksha Prajapati", "Himavan", "Vishwamitra"],
+      "answer": 2
+    },
+    "60": {
+      "question": "Mata Parvati na purvajanm nu nam su hatu?",
+      "options": ["Sati", "Ganga", "Uma", "Anusuya"],
+      "answer": 0
+    },
+    "61": {
+      "question": "Mata Parvati e kay gufa ma tapasya kari hati?",
+      "options": ["Amarnath Gufa", "Manikarnika Gufa", "Gauri Gufa", "Vaishno Devi Gufa"],
+      "answer": 2
+    },
+    "62": {
+      "question": "Shri Ram kay vansh na hataa?",
+      "options": ["Ikshvaku Vansh", "Yadu Vansh", "Chandravansh", "Raghu Vansh"],
+      "answer": 3
+    },
+    "63": {
+      "question": "Shri Ram na pita nu naam su hatu?",
+      "options": ["Dasharath", "Janak", "Dushyant", "Bharat"],
+      "answer": 0
+    },
+    "64": {
+      "question": "Shri Ram ni mata nu naam su hatu?",
+      "options": ["Kaikeyi", "Sumitra", "Kaushalya", "Mandodari"],
+      "answer": 2
+    },
+    "65": {
+      "question": "Mata Sita na pita nu naam su hatu?",
+      "options": ["Vishwamitra", "Janak", "Dronacharya", "Shantanu"],
+      "answer": 1
+    },
+    "66": {
+      "question": "Ramayan pramane Shri Ram ketla varsh na vanvas ma gaya hata?",
+      "options": ["12 varsh", "10 varsh", "14 varsh", "16 varsh"],
+      "answer": 2
+    },
+    "67": {
+      "question": "Shri Ram e Lanka jita pachi konne rajya sopi didhu?",
+      "options": ["Hanuman", "Vibhishan", "Angad", "Sugriv"],
+      "answer": 1
+    },
+    "68": {
+      "question": "Shri Ram na ketla bhai hata?",
+      "options": ["2", "3", "4", "5"],
+      "answer": 1
+    },
+    "69": {
+      "question": "Lakshman ni patni nu nam su hatu?",
+      "options": ["Mandavi", "Urmila", "Shrutakirti", "Sumitra"],
+      "answer": 1
+    },
+    "70": {
+      "question": "Sita Mata ne Ravan ve kay van ma Haran karya hata?",
+      "options": ["Dandakaranya", "Chitrakoot", "Panchavati", "Rameshwaram"],
+      "answer": 2
+    },
+    "71": {
+      "question": "Shri Ram ne Bharat kyare bhet karya hata?",
+      "options": ["Lanka Vijay pachi", "Vanvas doraan Chitrakoot ma", "Janakpur yatra ma", "Ayodhya pravesh na divas"],
+      "answer": 1
+    },
+    "72": {
+      "question": "Ramayan pramane Hanuman e Lanka ma kay rani no nash karyo hato?",
+      "options": ["Mandodari", "Trijata", "Surasa", "Lankini"],
+      "answer": 3
+    },
+    "73": {
+      "question": "Ramayan anusar mata Sumitra na putra nu nam su hatu?",
+      "options": ["Ram", "Bharat", "Lakshman", "Nakul"],
+      "answer": 2
+    },
+    "74": {
+      "question": "Ravan ne kona shrap na karane Lanka nu naash thayu hatu?",
+      "options": ["Narad Muni no shrap", "Brahma no shrap", "Nandi no shrap", "Vishwamitra no shrap"],
+      "answer": 2
+    },
+    "75": {
+      "question": "Shri Ram e Lanka Vijay pachi kay bhagwan ni puja kari hati?",
+      "options": ["Vishnu", "Shiva", "Brahma", "Surya"],
+      "answer": 1
+    }
+  }
 
         let timer;
         const input = document.getElementById('questionNum');
         const container = document.getElementById('questionContainer');
         const timerDisplay = document.getElementById('timer');
-
-        function toggleLanguage() {
-            currentLanguage = currentLanguage === 'en' ? 'gu' : 'en';
-            const qNum = parseInt(input.value);
-            if(qNum in questions) showQuestion(qNum);
-        }
 
         input.addEventListener('keypress', (e) => {
             if(e.key === 'Enter') {
@@ -163,15 +628,13 @@
                     showQuestion(qNum);
                     startTimer();
                 } else {
-                    container.innerHTML = currentLanguage === 'en' 
-                        ? "Question not found!" 
-                        : "પ્રશ્ન મળ્યો નથી!";
+                    container.innerHTML = "Question not found!";
                 }
             }
         });
 
         function showQuestion(num) {
-            const q = questions[num][currentLanguage];
+            const q = questions[num];
             let html = `<h3>${q.question}</h3>`;
             q.options.forEach((option, index) => {
                 html += `<div class="option" onclick="checkAnswer(${index}, ${q.answer})">${option}</div>`;
@@ -189,17 +652,13 @@
                 
                 if(timeLeft <= 0) {
                     clearInterval(timer);
-                    container.innerHTML += `<br>${currentLanguage === 'en' 
-                        ? "Time's up!" 
-                        : "સમય સમાપ્ત!"}`;
+                    container.innerHTML += "<br>Time's up!";
                 }
             }, 1000);
         }
 
         function updateTimerDisplay(time) {
-            timerDisplay.textContent = currentLanguage === 'en' 
-                ? `⏳ Time left: ${time} seconds` 
-                : `⏳ બાકી સમય: ${time} સેકંડ`;
+            timerDisplay.textContent = `⏳ Time left: ${time} seconds`;
         }
 
         function checkAnswer(selected, correct) {
