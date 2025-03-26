@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Jalaram Tirth Yatra</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            max-width: 800px;
+            margin: 0 auto;
+            background-color: #f0f8ff;
+        }
+
+        #questionContainer {
+            margin-top: 20px;
+            padding: 20px;
+            border: 2px solid #4CAF50;
+            border-radius: 10px;
+            background-color: white;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+
+        .option {
+            margin: 10px;
+            padding: 15px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .option:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        #timer {
+            font-size: 1.5em;
+            color: #ff4444;
+            margin: 15px 0;
+            font-weight: bold;
+        }
+
+        input {
+            padding: 12px;
+            width: 250px;
+            border: 2px solid #4CAF50;
+            border-radius: 8px;
+            font-size: 16px;
+        }
+
+        .language-toggle {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 10px 20px;
+            cursor: pointer;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            font-weight: bold;
+        }
+
+        @keyframes flowing-green {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        @keyframes thumbsDown {
+            0% { transform: translateY(0) rotate(0deg); }
+            25% { transform: translateY(-20px) rotate(-30deg); }
+            50% { transform: translateY(0) rotate(0deg); }
+            75% { transform: translateY(-10px) rotate(30deg); }
+            100% { transform: translateY(0) rotate(0deg); }
+        }
+
+        .correct-highlight {
+            background: linear-gradient(90deg, #00ff00, #00cc00, #00ff00);
+            background-size: 200% 200%;
+            animation: flowing-green 2s linear infinite;
+            color: white;
+            font-weight: bold;
+            border-color: #009900 !important;
+        }
+
+        .thumbs-down-animation {
+            font-size: 3em;
+            display: inline-block;
+            animation: thumbsDown 1s ease-in-out;
+            margin-top: 20px;
+        }
+
+        .wrong-answer {
+            background-color: #ff4444 !important;
+            color: white;
+            border-color: #cc0000 !important;
+        }
+
+        h1 {
+            color: #2c3e50;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+    </style>
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.5.1/dist/confetti.browser.min.js"></script>
+</head>
+<body>
+    <h1>🌏 Bilingual Knowledge Quiz</h1>
+    <button class="language-toggle" onclick="toggleLanguage()">Toggle Language/ભાષા બદલો</button>
+    <input type="number" id="questionNum" placeholder="Enter question number/પ્રશ્ન નંબર દાખલ કરો" min="1">
+    <div id="timer"></div>
+    <div id="questionContainer"></div>
+
+    <script>
+        let currentLanguage = 'en';
+        const questions = {
+            1: {
+                en: {
+                    question: "Where was Lord Krishna born?",
+                    options: ["Mathura", "Dwarka", "Gokul", "Vrindavan"],
+                    answer: 0
+                },
+                gu: {
+                    question: "ભગવાન કૃષ્ણનો જન્મ ક્યાં થયો હતો?",
+                    options: ["મથુરા", "દ્વારકા", "ગોકુળ", "વૃંદાવન"],
+                    answer: 0
+                }
+            },
+            40: {
+                en: {
+                    question: "Which god's birthday is Ganesh Chaturthi?",
+                    options: ["Vishnu", "Shiva", "Ganesh", "Hanuman"],
+                    answer: 2
+                },
+                gu: {
+                    question: "ગણેશ ચતુર્થી કયા ભગવાનનો જન્મોત્સવ છે?",
+                    options: ["વિષ્ણુ", "શિવ", "ગણેશ", "હનુમાન"],
+                    answer: 2
+                }
+            }
+            // Add more questions in this format
+        };
+
+        let timer;
+        const input = document.getElementById('questionNum');
+        const container = document.getElementById('questionContainer');
+        const timerDisplay = document.getElementById('timer');
+
+        function toggleLanguage() {
+            currentLanguage = currentLanguage === 'en' ? 'gu' : 'en';
+            const qNum = parseInt(input.value);
+            if(qNum in questions) showQuestion(qNum);
+        }
+
+        input.addEventListener('keypress', (e) => {
+            if(e.key === 'Enter') {
+                const qNum = parseInt(input.value);
+                if(qNum in questions) {
+                    showQuestion(qNum);
+                    startTimer();
+                } else {
+                    container.innerHTML = currentLanguage === 'en' 
+                        ? "Question not found!" 
+                        : "પ્રશ્ન મળ્યો નથી!";
+                }
+            }
+        });
+
+        function showQuestion(num) {
+            const q = questions[num][currentLanguage];
+            let html = `<h3>${q.question}</h3>`;
+            q.options.forEach((option, index) => {
+                html += `<div class="option" onclick="checkAnswer(${index}, ${q.answer})">${option}</div>`;
+            });
+            container.innerHTML = html;
+        }
+
+        function startTimer() {
+            let timeLeft = 30;
+            updateTimerDisplay(timeLeft);
+            
+            timer = setInterval(() => {
+                timeLeft--;
+                updateTimerDisplay(timeLeft);
+                
+                if(timeLeft <= 0) {
+                    clearInterval(timer);
+                    container.innerHTML += `<br>${currentLanguage === 'en' 
+                        ? "Time's up!" 
+                        : "સમય સમાપ્ત!"}`;
+                }
+            }, 1000);
+        }
+
+        function updateTimerDisplay(time) {
+            timerDisplay.textContent = currentLanguage === 'en' 
+                ? `⏳ Time left: ${time} seconds` 
+                : `⏳ બાકી સમય: ${time} સેકંડ`;
+        }
+
+        function checkAnswer(selected, correct) {
+            clearInterval(timer);
+            const options = document.getElementsByClassName('option');
+            const correctAnswered = selected === correct;
+
+            Array.from(options).forEach((opt, index) => {
+                opt.style.pointerEvents = 'none';
+                opt.classList.remove('correct-highlight', 'wrong-answer');
+
+                if(index === correct) {
+                    opt.classList.add('correct-highlight');
+                }
+                
+                if(index === selected && !correctAnswered) {
+                    opt.classList.add('wrong-answer');
+                }
+            });
+
+            if(correctAnswered) {
+                confetti({
+                    particleCount: 150,
+                    spread: 100,
+                    origin: { y: 0.6 },
+                    colors: ['#4CAF50', '#45a049', '#3d8b40']
+                });
+            } else {
+                const thumbsDown = document.createElement('div');
+                thumbsDown.className = 'thumbs-down-animation';
+                thumbsDown.innerHTML = '👎';
+                container.appendChild(thumbsDown);
+                
+                setTimeout(() => thumbsDown.remove(), 1000);
+            }
+        }
+    </script>
+</body>
+</html>
