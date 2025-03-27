@@ -22,7 +22,7 @@
             background-color: var(--background);
             color: var(--text);
             min-height: 100vh;
-            background-image: radial-gradient(circle at center, #0f3460 0%, #1a1a2e 100%);
+            background-image: radial-gradient(circle at center, #0f3460 0%, var(--background) 100%);
         }
 
         .container {
@@ -34,7 +34,7 @@
             padding: 20px;
         }
 
-        /* Millionaire-style quiz section */
+        /* Quiz section */
         .quiz-section {
             position: relative;
             background: linear-gradient(135deg, #0f3460 0%, #1a1a2e 100%);
@@ -55,6 +55,8 @@
             min-height: 120px;
             display: flex;
             align-items: center;
+            justify-content: center;
+            text-align: center;
         }
 
         .options-grid {
@@ -75,6 +77,7 @@
             font-size: 1.2em;
             display: flex;
             align-items: center;
+            justify-content: center;
         }
 
         .option:hover {
@@ -122,46 +125,61 @@
             border: 2px solid var(--highlight);
         }
 
+        .teams-horizontal {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-bottom: 20px;
+            justify-content: center;
+        }
+
         .team {
             background: rgba(0, 0, 0, 0.5);
             padding: 15px;
-            margin-bottom: 15px;
             border-radius: 10px;
             display: flex;
+            flex-direction: column;
             align-items: center;
-            gap: 15px;
+            min-width: calc(16.66% - 20px);
+            max-width: calc(16.66% - 20px);
             border-left: 5px solid var(--secondary);
+            box-sizing: border-box;
         }
 
         .team-name {
-            flex: 1;
-            padding: 10px;
+            width: 100%;
+            padding: 8px;
             border: none;
             border-radius: 5px;
             background: rgba(255, 255, 255, 0.1);
             color: white;
+            text-align: center;
+            margin-bottom: 10px;
+            font-size: 0.9em;
         }
 
         .team-score {
-            font-size: 1.5em;
+            font-size: 2em;
             font-weight: bold;
-            min-width: 60px;
-            text-align: center;
             color: var(--highlight);
+            margin-bottom: 10px;
         }
 
         .score-controls {
             display: flex;
-            gap: 8px;
+            gap: 5px;
+            flex-wrap: wrap;
+            justify-content: center;
         }
 
         button {
             border: none;
-            padding: 8px 15px;
+            padding: 5px 10px;
             border-radius: 5px;
             cursor: pointer;
             font-weight: 600;
             transition: all 0.2s ease;
+            font-size: 0.8em;
         }
 
         .add-team-btn {
@@ -175,6 +193,19 @@
 
         .plus-btn { background: var(--primary); color: white; }
         .minus-btn { background: var(--danger); color: white; }
+
+        /* Language toggle */
+        .language-toggle {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            z-index: 100;
+            background: rgba(0,0,0,0.7);
+            padding: 10px 15px;
+            border-radius: 20px;
+            cursor: pointer;
+            border: 1px solid var(--highlight);
+        }
 
         /* Animations */
         @keyframes flowing-green {
@@ -237,6 +268,7 @@
         h2 {
             color: var(--highlight);
             margin-top: 0;
+            text-align: center;
         }
 
         /* Input style */
@@ -250,6 +282,7 @@
             font-size: 1.2em;
             margin-bottom: 20px;
             border-bottom: 3px solid var(--highlight);
+            text-align: center;
         }
 
         #questionNum::placeholder {
@@ -265,19 +298,23 @@
             .container {
                 padding: 10px;
             }
+            
+            .team {
+                min-width: calc(50% - 20px);
+                max-width: calc(50% - 20px);
+            }
         }
     </style>
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.5.1/dist/confetti.browser.min.js"></script>
 </head>
 <body>
+    <!-- Language toggle -->
+    <div class="language-toggle" id="languageToggle" onclick="toggleLanguage()">
+        ગુજરાતી / Gujarati
+    </div>
+
     <div class="container">
         <h1>ॐ Jalaram Tirth Yatra Quiz ॐ</h1>
-        
-        <div class="scoring-section">
-            <h2>TEAM SCORES 🏆</h2>
-            <div id="teamsContainer"></div>
-            <button class="add-team-btn" onclick="addTeam()">➕ ADD TEAM</button>
-        </div>
 
         <div class="quiz-section">
             <input type="number" id="questionNum" placeholder="Enter question number" min="1">
@@ -286,10 +323,822 @@
             <div class="options-grid" id="optionsContainer"></div>
             <div id="feedbackContainer"></div>
         </div>
+
+        <div class="scoring-section">
+            <h2>TEAM SCORES 🏆</h2>
+            <div class="teams-horizontal" id="teamsContainer"></div>
+            <button class="add-team-btn" onclick="addTeam()">➕ ADD TEAM</button>
+        </div>
     </div>
 
+    <!-- Audio Elements -->
+    <audio id="correctSound" src="https://assets.mixkit.co/sfx/preview/mixkit-correct-answer-tone-2870.mp3"></audio>
+    <audio id="wrongSound" src="https://assets.mixkit.co/sfx/preview/mixkit-wrong-answer-fail-notification-946.mp3"></audio>
+
     <script>
-        // Team scoring system
+        // Language toggle functionality
+        let currentLanguage = 'gujarati';
+        const languageMap = {
+            // This will be populated from the questions data
+        };
+
+        function toggleLanguage() {
+            currentLanguage = currentLanguage === 'gujarati' ? 'romanized' : 'gujarati';
+            document.getElementById('languageToggle').textContent = 
+                currentLanguage === 'gujarati' ? 'ગુજરાતી / Gujarati' : 'Gujarati / ગુજરાતી';
+            
+            // Update current question if one is displayed
+            const currentQuestionNum = document.getElementById('questionNum').value;
+            if (currentQuestionNum && questions[currentQuestionNum]) {
+                showQuestion(currentQuestionNum);
+            }
+        }
+
+        // Quiz questions (from the provided JSON)
+        const questions = {
+            "1": {
+                "question": "Bhagwan Krishna nu janm kyā thayu hatu?",
+                "options": ["Mathura", "Dwarka", "Gokul", "Vrindavan"],
+                "answer": 0,
+                "gujarati": {
+                    "question": "ભગવાન કૃષ્ણનો જન્મ ક્યાં થયો હતો?",
+                    "options": ["મથુરા", "દ્વારકા", "ગોકુળ", "વૃંદાવન"]
+                }
+            },
+            "2": {
+                "question": "Kans na keṭla bhai-baheno hata je Krishna na shatrupanu karata hata?",
+                "options": ["2", "4", "6", "8"],
+                "answer": 3,
+                "gujarati": {
+                    "question": "કંસને કેટલા ભાઈ-બહેનો હતા જે કૃષ્ણના શત્રુપણું કરતા હતા?",
+                    "options": ["2", "4", "6", "8"]
+                }
+            },
+            "3": {
+                "question": "Bhagwan Krishna na pita Vasudev kyā vansh na hata?",
+                "options": ["Yadu Vansh", "Ikshvaku Vansh", "Haihay Vansh", "Puru Vansh"],
+                "answer": 0,
+                "gujarati": {
+                    "question": "ભગવાન કૃષ્ણના પિતા વસુદેવ કયા વંશના હતા?",
+                    "options": ["યદુ વંશ", "ઇક્ષ્વાકુ વંશ", "હૈહય વંશ", "પુરુ વંશ"]
+                }
+            },
+            "4": {
+                "question": "Kans e Devki na ketla santano ne maari nakhya hata?",
+                "options": ["4", "6", "7", "8"],
+                "answer": 1,
+                "gujarati": {
+                    "question": "કંસ એ દેવકીના કેટલા સંતાનોને મારી નાખ્યા હતા?",
+                    "options": ["4", "6", "7", "8"]
+                }
+            },
+            "5": {
+                "question": "Krishna e kai daitya stri ne mari ne Gokul ne bachavyu hatu?",
+                "options": ["Holika", "Putana", "Trijata", "Surpanakha"],
+                "answer": 1,
+                "gujarati": {
+                    "question": "કૃષ્ણ એ કઈ દૈત્ય સ્ત્રીને મારી ને ગોકુળને બચાવ્યુ હતુ?",
+                    "options": ["હોલિકા", "પૂતના", "ત્રિજટા", "સુરપનખા"]
+                }
+            },
+            "6": {
+                "question": "Kansa ne maarva pachi Krishna e kyā raja nu takht sambharyu hatu?",
+                "options": ["Mathura", "Dwarka", "Indraprastha", "Hastinapur"],
+                "answer": 0,
+                "gujarati": {
+                    "question": "કંસને મારવા પછી કૃષ્ણ એ ક્યા રાજાનું થાણું સંભાળ્યુ હતુ?",
+                    "options": ["મથુરા", "દ્વારકા", "ઇન્દ્રપ્રસ્થ", "હસ્તિનાપુર"]
+                }
+            },
+            "7": {
+                "question": "Bhagwan Krishna e Govardhan Parvat kyā divas ughami rakhyo hato?",
+                "options": ["3 divas", "5 divas", "7 divas", "9 divas"],
+                "answer": 2,
+                "gujarati": {
+                    "question": "ભગવાન કૃષ્ણ એ ગોવર્ધન પર્વત ક્યા દિવસ ઊભા રાખ્યો હતો?",
+                    "options": ["3 દિવસ", "5 દિવસ", "7 દિવસ", "9 દિવસ"]
+                }
+            },
+            "8": {
+                "question": "Rukmini e Krishna ne kyā thi bhagavi ne lagan karyu hatu?",
+                "options": ["Vidarbha", "Mathura", "Dwarka", "Hastinapur"],
+                "answer": 0,
+                "gujarati": {
+                    "question": "રુક્મિણી એ કૃષ્ણને ક્યાંથી ભગાવી ને લગ્ન કર્યુ હતુ?",
+                    "options": ["વિદર્ભ", "મથુરા", "દ્વારકા", "હસ્તિનાપુર"]
+                }
+            },
+            "9": {
+                "question": "Bhagwan Krishna e Mahabharat na yuddh ma Arjun ne kyā updesh aapyo hato?",
+                "options": ["Vishnu Puran", "Bhagavad Gita", "Srimad Bhagavatam", "Yajur Veda"],
+                "answer": 1,
+                "gujarati": {
+                    "question": "ભગવાન કૃષ્ણ એ મહાભારતના યુદ્ધમાં અર્જુનને કયું ઉપદેશ આપ્યો હતો?",
+                    "options": ["વિષ્ણુ પુરાણ", "ભગવદ્ ગીતા", "શ્રીમદ્ ભાગવતમ્", "યજુર્ વેદ"]
+                }
+            },
+            "10": {
+                "question": "Krishna e kai rani saathe sathvaro (Raas Leela) vadhare karyo hato?",
+                "options": ["Rukmini", "Satyabhama", "Radha", "Jambvati"],
+                "answer": 2,
+                "gujarati": {
+                    "question": "કૃષ્ણ એ કઈ રાણી સાથે સાથવારો (રાસ લીલા) વધારે કર્યો હતો?",
+                    "options": ["રુક્મિણી", "સત્યભામા", "રાધા", "જાંબવંતી"]
+                }
+            },
+            "11": {
+                "question": "Vishnu Puran ma ketla adhyaay che?",
+                "options": ["50", "100", "126", "200"],
+                "answer": 2,
+                "gujarati": {
+                    "question": "વિષ્ણુ પુરાણમાં કેટલા અધ્યાય છે?",
+                    "options": ["50", "100", "126", "200"]
+                }
+            },
+            "12": {
+                "question": "Vishnu Puran pramane kayu yug lamboo che?",
+                "options": ["Kali Yug", "Treta Yug", "Dwapar Yug", "Satya Yug"],
+                "answer": 3,
+                "gujarati": {
+                    "question": "વિષ્ણુ પુરાણ પ્રમાણે કયું યુગ લાંબુ છે?",
+                    "options": ["કલિયુગ", "ત્રેતાયુગ", "દ્વાપર યુગ", "સત્ય યુગ"]
+                }
+            },
+            "13": {
+                "question": "Kali Yug na antim samay ma Vishnu bhagwan no kayu avatar aavshe?",
+                "options": ["Matsya", "Kalki", "Ram", "Krishna"],
+                "answer": 1,
+                "gujarati": {
+                    "question": "કલિયુગના અંતિમ સમયમાં વિષ્ણુ ભગવાનનો કયો અવતાર આવશે?",
+                    "options": ["મત્સ્ય", "કલ્કિ", "રામ", "કૃષ્ણ"]
+                }
+            },
+            "14": {
+                "question": "Vishnu Bhagwan ni patni kon che?",
+                "options": ["Saraswati", "Parvati", "Lakshmi", "Radha"],
+                "answer": 2,
+                "gujarati": {
+                    "question": "વિષ્ણુ ભગવાનની પત્ની કોણ છે?",
+                    "options": ["સરસ્વતી", "પાર્વતી", "લક્ષ્મી", "રાધા"]
+                }
+            },
+            "15": {
+                "question": "Vishnu Bhagwan ye varaha avatar ma kaya rakshas ne maaro hato?",
+                "options": ["Hiranyakashipu", "Hiranyaksha", "Ravan", "Kumbhakarna"],
+                "answer": 1,
+                "gujarati": {
+                    "question": "વિષ્ણુ ભગવાને વરાહ અવતારમાં કયા રાક્ષસને માર્યો હતો?",
+                    "options": ["હિરણ્યકશિપુ", "હિરણ્યાક્ષ", "રાવણ", "કુંભકર્ણ"]
+                }
+            },
+            "16": {
+                "question": "Vishnu Puran sathe, total ketla Puran che?",
+                "options": ["10", "12", "18", "24"],
+                "answer": 2,
+                "gujarati": {
+                    "question": "વિષ્ણુ પુરાણ સાથે, કુલ કેટલા પુરાણ છે?",
+                    "options": ["10", "12", "18", "24"]
+                }
+            },
+            "17": {
+                "question": "Vishnu Puran na rachayita kon che?",
+                "options": ["Narad", "Veda Vyaas", "Valmiki", "Agastya"],
+                "answer": 1,
+                "gujarati": {
+                    "question": "વિષ્ણુ પુરાણના રચયિતા કોણ છે?",
+                    "options": ["નારદ", "વેદ વ્યાસ", "વાલ્મીકિ", "અગસ્ત્ય"]
+                }
+            },
+            "18": {
+                "question": "Aa ma thi kayu Vishnu Bhagwan nu avatar nathi?",
+                "options": ["Vaman", "Buddha", "Kurma", "Hanuman"],
+                "answer": 3,
+                "gujarati": {
+                    "question": "આમાંથી કયું વિષ્ણુ ભગવાનનું અવતાર નથી?",
+                    "options": ["વામન", "બુદ્ધ", "કુર્મ", "હનુમાન"]
+                }
+            },
+            "19": {
+                "question": "Vishnu Puran anusar kay nadi vadhare pavitra che?",
+                "options": ["Saraswati", "Ganga", "Yamuna", "Narmada"],
+                "answer": 1,
+                "gujarati": {
+                    "question": "વિષ્ણુ પુરાણ અનુસાર કઈ નદી વધારે પવિત્ર છે?",
+                    "options": ["સરસ્વતી", "ગંગા", "યમુના", "નર્મદા"]
+                }
+            },
+            "20": {
+                "question": "Vishnu Puran anusar Vishnu Bhagwan kaya yug ma Prithvi par Krishna avatar ma avya hata?",
+                "options": ["Treta Yug", "Dwapar Yug", "Satya Yug", "Kali Yug"],
+                "answer": 1,
+                "gujarati": {
+                    "question": "વિષ્ણુ પુરાણ અનુસાર વિષ્ણુ ભગવાન કયા યુગમાં પૃથ્વી પર કૃષ્ણ અવતારમાં આવ્યા હતા?",
+                    "options": ["ત્રેતાયુગ", "દ્વાપર યુગ", "સત્ય યુગ", "કલિયુગ"]
+                }
+            },
+            "21": {
+                "question": "Vishnu Puran pramane Bhagwan Vishnu nu asli nivas kya che?",
+                "options": ["Kailas Parvat", "Vaikunth", "Swarg Lok", "Brahmalok"],
+                "answer": 1,
+                "gujarati": {
+                    "question": "વિષ્ણુ પુરાણ પ્રમાણે ભગવાન વિષ્ણુનું અસલી નિવાસ ક્યાં છે?",
+                    "options": ["કૈલાસ પર્વત", "વૈકુંઠ", "સ્વર્ગ લોક", "બ્રહ્મલોક"]
+                }
+            },
+            "22": {
+                "question": "Kans ne kay rishi dwara aashirvaad ma shraap malyo hato?",
+                "options": ["Garg Rishi", "Narad Muni", "Durvasa Rishi", "Akashvani (divya aawaz)"],
+                "answer": 3,
+                "gujarati": {
+                    "question": "કંસને કયા ઋષિ દ્વારા આશીર્વાદમાં શ્રાપ મળ્યો હતો?",
+                    "options": ["ગર્ગ ઋષિ", "નારદ મુનિ", "દુર્વાસા ઋષિ", "આકાશવાણી (દિવ્ય આવાજ)"]
+                }
+            },
+            "23": {
+                "question": "Krishna Bhagwan ne kyun mata ne garbh ma janm lidho?",
+                "options": ["Mata Yashoda", "Mata Kunti", "Mata Devaki", "Mata Rohini"],
+                "answer": 2,
+                "gujarati": {
+                    "question": "કૃષ્ણ ભગવાનને ક્યું માતાને ગર્ભમાં જન્મ લીધો?",
+                    "options": ["માતા યશોદા", "માતા કુંતી", "માતા દેવકી", "માતા રોહિણી"]
+                }
+            },
+            "24": {
+                "question": "Kans e Krishna Bhagwan ne maarva mate kay rakshaso ne mokalya hata?",
+                "options": ["Putana", "Trinavarta", "Bakasur", "Aakhana badha (all of the above)"],
+                "answer": 3,
+                "gujarati": {
+                    "question": "કંસ એ કૃષ્ણ ભગવાનને મારવા માટે કયા રાક્ષસોને મોકલ્યા હતા?",
+                    "options": ["પૂતના", "તૃણાવર્ત", "બકાસુર", "આખાના બધા (ઉપરના બધા)"]
+                }
+            },
+            "25": {
+                "question": "Krishna Bhagwan e Gokul ma kay rashi upar naach karyo hato?",
+                "options": ["Mor pankh", "Kalindi nadi", "Kaliya naag na mastak par", "Govardhan parvat par"],
+                "answer": 2,
+                "gujarati": {
+                    "question": "કૃષ્ણ ભગવાને ગોકુળમાં કયા રાશિ ઉપર નાચ કર્યો હતો?",
+                    "options": ["મોર પંખ", "કાલિંદી નદી", "કાળિય નાગના મસ્તક પર", "ગોવર્ધન પર્વત પર"]
+                }
+            },
+            "26": {
+                "question": "Krishna Bhagwan e kay parvat ne ungli par uthavyo hato?",
+                "options": ["Kailas parvat", "Himalaya", "Govardhan parvat", "Vindhyachal"],
+                "answer": 2,
+                "gujarati": {
+                    "question": "કૃષ્ણ ભગવાને કયા પર્વતને ઉંગલી પર ઉઠાવ્યો હતો?",
+                    "options": ["કૈલાસ પર્વત", "હિમાલય", "ગોવર્ધન પર્વત", "વિંધ્યાચલ"]
+                }
+            },
+            "27": {
+                "question": "Krishna Bhagwan no saacho mitra kayu hato?",
+                "options": ["Balram", "Sudama", "Arjun", "Uddhav"],
+                "answer": 1,
+                "gujarati": {
+                    "question": "કૃષ્ણ ભગવાનનો સાચો મિત્ર કયો હતો?",
+                    "options": ["બલરામ", "સુદામા", "અર્જુન", "ઉદ્ધવ"]
+                }
+            },
+            "28": {
+                "question": "Krishna Bhagwan ni Rasa-Leela kyare varnit thai chhe?",
+                "options": ["Krishna na balpan ma", "Yuvavastha ma", "Vanvaas ma", "Mahabharat yuddh pachi"],
+                "answer": 0,
+                "gujarati": {
+                    "question": "કૃષ્ણ ભગવાનની રાસ-લીલા ક્યારે વર્ણિત થાય છે?",
+                    "options": ["કૃષ્ણના બાલપણમાં", "યુવાવસ્થામાં", "વનવાસમાં", "મહાભારત યુદ્ધ પછી"]
+                }
+            },
+            "29": {
+                "question": "Krishna Bhagwan e Dwarika ni sthapna kyare kari?",
+                "options": ["Kansa ne maarva pachi", "Govardhan puja pachi", "Putana ne maarva pachi", "Mahabharat yuddh ni shuruaat ma"],
+                "answer": 0,
+                "gujarati": {
+                    "question": "કૃષ્ણ ભગવાને દ્વારિકાની સ્થાપના ક્યારે કરી?",
+                    "options": ["કંસને મારવા પછી", "ગોવર્ધન પૂજા પછી", "પૂતનાને મારવા પછી", "મહાભારત યુદ્ધની શરૂઆતમાં"]
+                }
+            },
+            "30": {
+                "question": "Matsya avatar ma Bhagwan e kyane raksha kari hati?",
+                "options": ["Manu ane vedo", "Raja Bali", "Prithvi Devi", "Gajendra"],
+                "answer": 0,
+                "gujarati": {
+                    "question": "મત્સ્ય અવતારમાં ભગવાને ક્યને રક્ષા કરી હતી?",
+                    "options": ["મનુ અને વેદો", "રાજા બલિ", "પૃથ્વી દેવી", "ગજેન્દ્ર"]
+                }
+            },
+            "31": {
+                "question": "Kurma avatar ma Bhagwan e kay kriya ma sahay kari hati?",
+                "options": ["Yagna", "Amrut manthan", "Tapasya", "Daan"],
+                "answer": 1,
+                "gujarati": {
+                    "question": "કુર્મ અવતારમાં ભગવાને કઈ ક્રિયામાં સહાય કરી હતી?",
+                    "options": ["યજ્ઞ", "અમૃત મંથન", "તપસ્યા", "દાન"]
+                }
+            },
+            "32": {
+                "question": "Varaha avatar ma Bhagwan e Prithvi ne kyathi bachavi hati?",
+                "options": ["Ksheer Sagar maathi", "Pataal maathi", "Himalaya par", "Brahmand maathi"],
+                "answer": 1,
+                "gujarati": {
+                    "question": "વરાહ અવતારમાં ભગવાને પૃથ્વીને ક્યાંથી બચાવી હતી?",
+                    "options": ["ક્ષીર સાગરમાંથી", "પાતાળમાંથી", "હિમાલય પર", "બ્રહ્માંડમાંથી"]
+                }
+            },
+            "33": {
+                "question": "Narasimha avatar ma Bhagwan e kay raja ne maaro hato?",
+                "options": ["Hiranyakashyap", "Ravana", "Kans", "Duryodhan"],
+                "answer": 0,
+                "gujarati": {
+                    "question": "નરસિંહ અવતારમાં ભગવાને કયા રાજાને માર્યો હતો?",
+                    "options": ["હિરણ્યકશિપુ", "રાવણ", "કંસ", "દુર્યોધન"]
+                }
+            },
+            "34": {
+                "question": "Vaman avatar ma Bhagwan e kay raja ne teen pag ma naapyo hato?",
+                "options": ["Raja Bali", "Raja Harishchandra", "Raja Parikshit", "Raja Janak"],
+                "answer": 0,
+                "gujarati": {
+                    "question": "વામન અવતારમાં ભગવાને કયા રાજાને ત્રણ પગમાં નાપ્યો હતો?",
+                    "options": ["રાજા બલિ", "રાજા હરિશ્ચંદ્ર", "રાજા પરીક્ષિત", "રાજા જનક"]
+                }
+            },
+            "35": {
+                "question": "Parshuram avatar e kay shastra dharan karyu hatu?",
+                "options": ["Trishul", "Talwar", "Parshu (kulhadi)", "Dhanush"],
+                "answer": 2,
+                "gujarati": {
+                    "question": "પરશુરામ અવતારે કયું શસ્ત્ર ધારણ કર્યુ હતુ?",
+                    "options": ["ત્રિશૂળ", "તલવાર", "પરશુ (કુહાડી)", "ધનુષ"]
+                }
+            },
+            "36": {
+                "question": "Ram avatar ma Bhagwan ni patni nu naam shu hatu?",
+                "options": ["Radha", "Draupadi", "Sita", "Rukmini"],
+                "answer": 2,
+                "gujarati": {
+                    "question": "રામ અવતારમાં ભગવાનની પત્નીનું નામ શું હતુ?",
+                    "options": ["રાધા", "દ્રૌપદી", "સીતા", "રુક્મિણી"]
+                }
+            },
+            "37": {
+                "question": "Krishna avatar ma Bhagwan na pehla bhai nu naam shu hatu?",
+                "options": ["Sheshnag", "Balram", "Uddhav", "Sudama"],
+                "answer": 1,
+                "gujarati": {
+                    "question": "કૃષ્ણ અવતારમાં ભગવાનના પહેલા ભાઈનું નામ શું હતુ?",
+                    "options": ["શેષનાગ", "બલરામ", "ઉદ્ધવ", "સુદામા"]
+                }
+            },
+            "38": {
+                "question": "Buddha avatar ma Bhagwan Vishnu e su sandesh aapyo hato?",
+                "options": ["Karm karo", "Satya no paath", "Ahinsa ane daya", "Shakti aradhana"],
+                "answer": 2,
+                "gujarati": {
+                    "question": "બુદ્ધ અવતારમાં ભગવાન વિષ્ણુએ શું સંદેશ આપ્યો હતો?",
+                    "options": ["કર્મ કરો", "સત્યનો પાઠ", "અહિંસા અને દયા", "શક્તિ આરાધના"]
+                }
+            },
+            "39": {
+                "question": "Kalki avatar kyare aavshe?",
+                "options": ["Satya Yug", "Treta Yug", "Dwapar Yug", "Kaliyug na ant ma"],
+                "answer": 3,
+                "gujarati": {
+                    "question": "કલ્કિ અવતાર ક્યારે આવશે?",
+                    "options": ["સત્ય યુગ", "ત્રેતાયુગ", "દ્વાપર યુગ", "કલિયુગના અંતમાં"]
+                }
+            },
+            "40": {
+                "question": "ગણેશ ચતુર્થી કયા ભગવાનનો જન્મોત્સવ છે?",
+                "options": ["વિષ્ણુ", "શિવ", "ગણેશ", "હનુમાન"],
+                "answer": 2,
+                "romanized": {
+                    "question": "Ganesh Chaturthi kyā bhagwan no janmotsav che?",
+                    "options": ["Vishnu", "Shiv", "Ganesh", "Hanuman"]
+                }
+            },
+            "41": {
+                "question": "ગણેશજીના માતા-પિતા કોણ છે?",
+                "options": ["શિવ અને પાર્વતી", "વિષ્ણુ અને લક્ષ્મી", "બ્રહ્મા અને સરસ્વતી", "ઇન્દ્ર અને અહલ્યા"],
+                "answer": 0,
+                "romanized": {
+                    "question": "Ganeshji na mata-pita kon che?",
+                    "options": ["Shiv ane Parvati", "Vishnu ane Lakshmi", "Brahma ane Saraswati", "Indra ane Ahilya"]
+                }
+            },
+            "42": {
+                "question": "ગણેશજીનો વાહન કયો છે?",
+                "options": ["હાથી", "મોષક", "સિંહ", "ઉંટ"],
+                "answer": 1,
+                "romanized": {
+                    "question": "Ganeshji no vahan kyo che?",
+                    "options": ["Hathi", "Moshak", "Sinh", "Unt"]
+                }
+            },
+            "43": {
+                "question": "ગણેશ ચતુર્થીને બીજા ક્યા નામથી ઓળખાય છે?",
+                "options": ["વિનાયક ચતુર્થી", "શિવરાત્રિ", "હનુમાન જયંતી", "કૃષ્ણાષ્ટમી"],
+                "answer": 0,
+                "romanized": {
+                    "question": "Ganesh Chaturthi ne bija kyā namthi olkhaay che?",
+                    "options": ["Vinayak Chaturthi", "Shivratri", "Hanuman Jayanti", "Krishnashtami"]
+                }
+            },
+            "44": {
+                "question": "ગણેશજીને કઈ મીઠાઈ પ્રિય છે?",
+                "options": ["લાડુ", "જલેબી", "રસ્મલાઈ", "પેડા"],
+                "answer": 0,
+                "romanized": {
+                    "question": "Ganeshji ne kai mithai priya che?",
+                    "options": ["Ladu", "Jalebi", "Rasmalai", "Peda"]
+                }
+            },
+            "45": {
+                "question": "ગણેશજીને કઈ મૂર્ખતા માટે પ્રસિદ્ધ છે?",
+                "options": ["બુદ્ધિ અને જ્ઞાન", "યોદ્ધા શક્તિ", "નૃત્ય", "સંગીત"],
+                "answer": 0,
+                "romanized": {
+                    "question": "Ganeshji ne kai murkhata mate prasiddh che?",
+                    "options": ["Buddhi ane gyan", "Yoddha shakti", "Nrutya", "Sangeet"]
+                }
+            },
+            "46": {
+                "question": "ગણેશ ચતુર્થીનો તહેવાર મુખ્યત્વે ક્યાં ઉજવાય છે?",
+                "options": ["ગુજરાત", "મહારાષ્ટ્ર", "પંજાબ", "તામિલનાડુ"],
+                "answer": 1,
+                "romanized": {
+                    "question": "Ganesh Chaturthi no tahevar mukhyatve kyā ujavay che?",
+                    "options": ["Gujarat", "Maharashtra", "Punjab", "Tamilnadu"]
+                }
+            },
+            "47": {
+                "question": "ગણેશજીના ભાઈનું નામ શું છે?",
+                "options": ["કાર્તિકેય", "ભદ્રકાલી", "રામ", "હનુમાન"],
+                "answer": 0,
+                "romanized": {
+                    "question": "Ganeshji na bhai nu naam shu che?",
+                    "options": ["Kartikey", "Bhadrakali", "Ram", "Hanuman"]
+                }
+            },
+            "48": {
+                "question": "ગણેશ ચતુર્થી કેટલા દિવસ સુધી ઉજવાય છે?",
+                "options": ["1 દિવસ", "5 દિવસ", "10 દિવસ", "15 દિવસ"],
+                "answer": 2,
+                "romanized": {
+                    "question": "Ganesh Chaturthi ketla divas sudhi ujavay che?",
+                    "options": ["1 divas", "5 divas", "10 divas", "15 divas"]
+                }
+            },
+            "49": {
+                "question": "ગણેશ ચતુર્થીનો સમાપન કયા દિવસ થાય છે?",
+                "options": ["હોળી", "દશેરા", "અનંત ચતુર્દશી", "દિવાળી"],
+                "answer": 2,
+                "romanized": {
+                    "question": "Ganesh Chaturthi no samapan kyā divas thay che?",
+                    "options": ["Holi", "Dussehra", "Anant Chaturdashi", "Diwali"]
+                }
+            },
+            "50": {
+                "question": "Shiv Puran pramane kay lok ma Shiv Bhagwan nivas kare che?",
+                "options": ["Swarg", "Patal", "Kailash", "Vaikunth"],
+                "answer": 2,
+                "gujarati": {
+                    "question": "શિવ પુરાણ પ્રમાણે કયા લોકમાં શિવ ભગવાન નિવાસ કરે છે?",
+                    "options": ["સ્વર્ગ", "પાતાળ", "કૈલાસ", "વૈકુંઠ"]
+                }
+            },
+            "51": {
+                "question": "Shiv Puran pramane kay raja Shiv Bhagwan na bhakt hata?",
+                "options": ["Harishchandra", "Dasharath", "Chandragupt", "Ravana"],
+                "answer": 3,
+                "gujarati": {
+                    "question": "શિવ પુરાણ પ્રમાણે કયા રાજા શિવ ભગવાનના ભક્ત હતા?",
+                    "options": ["હરિશ્ચંદ્ર", "દશરથ", "ચંદ્રગુપ્ત", "રાવણ"]
+                }
+            },
+            "52": {
+                "question": "Shiv Puran anusar Shiv Bhagwan ni kay shivling Jyotirling manvama ave che?",
+                "options": ["Gangeshwar", "Kedareshwar", "Mallikarjun", "Krishneshwar"],
+                "answer": 2,
+                "gujarati": {
+                    "question": "શિવ પુરાણ અનુસાર શિવ ભગવાનની કયા શિવલિંગ જ્યોતિર્લિંગ મનવામાં આવે છે?",
+                    "options": ["ગંગેશ્વર", "કેદારેશ્વર", "મલ્લિકાર્જુન", "કૃષ્ણેશ્વર"]
+                }
+            },
+            "53": {
+                "question": "Shiv Puran anusar Nandi na pita nu nam su che?",
+                "options": ["Vasishtha Rushi", "Shilad Rushi", "Kashyap Rushi", "Atri Rushi"],
+                "answer": 1,
+                "gujarati": {
+                    "question": "શિવ પુરાણ અનુસાર નંદીના પિતાનું નામ શું છે?",
+                    "options": ["વસિષ્ઠ ઋષિ", "શિલાદ ઋષિ", "કશ્યપ ઋષિ", "અત્રિ ઋષિ"]
+                }
+            },
+            "54": {
+                "question": "Bhawan Shiv na ketla nam che?",
+                "options": ["108", "125", "1000", "1008"],
+                "answer": 0,
+                "gujarati": {
+                    "question": "ભવાન શિવના કેટલા નામ છે?",
+                    "options": ["108", "125", "1000", "1008"]
+                }
+            },
+            "55": {
+                "question": "Bhawan Shiv ni Jhata ma kono vas che?",
+                "options": ["Narmada", "Saraswati", "Ganga", "Yamuna"],
+                "answer": 2,
+                "gujarati": {
+                    "question": "ભવાન શિવની જટામાં કોણ વસે છે?",
+                    "options": ["નર્મદા", "સરસ્વતી", "ગંગા", "યમુના"]
+                }
+            },
+            "56": {
+                "question": "Shiv Bhagwan ni puja ma kay vastu nathi vaprati?",
+                "options": ["Chandan", "Tulsi", "Dudh", "Bilipatra"],
+                "answer": 1,
+                "gujarati": {
+                    "question": "શિવ ભગવાનની પૂજામાં કઈ વસ્તુ નથી વપરાતી?",
+                    "options": ["ચંદન", "તુલસી", "દૂધ", "બિલીપત્ર"]
+                }
+            },
+            "57": {
+                "question": "Mata Sati na ant pasi Shiv bhagwan ve krodh ma avi ne kayu roop dharan karelu?",
+                "options": ["Bhairav", "Veerabhadra", "Natraj", "Durvasa"],
+                "answer": 1,
+                "gujarati": {
+                    "question": "માતા સતીના અંત પછી શિવ ભગવાન વે ક્રોધમાં આવી ને કયું રૂપ ધારણ કરેલુ?",
+                    "options": ["ભૈરવ", "વીરભદ્ર", "નટરાજ", "દુર્વાસા"]
+                }
+            },
+            "58": {
+                "question": "Maa Ganga ne swarglok mathi pruthvi par kon lavyu hatu?",
+                "options": ["Mahadev", "Bhagirath", "Brahmadev", "Narad muni"],
+                "answer": 1,
+                "gujarati": {
+                    "question": "મા ગંગાને સ્વર્ગલોક માંથી પૃથ્વી પર કોણ લાવ્યુ હતુ?",
+                    "options": ["મહાદેવ", "ભગીરથ", "બ્રહ્મદેવ", "નારદ મુનિ"]
+                }
+            },
+            "59": {
+                "question": "Mata Parvati na pita nu nam su hatu?",
+                "options": ["Kashyap Rushi", "Daksha Prajapati", "Himavan", "Vishwamitra"],
+                "answer": 2,
+                "gujarati": {
+                    "question": "માતા પાર્વતીના પિતાનું નામ શું હતુ?",
+                    "options": ["કશ્યપ ઋષિ", "દક્ષ પ્રજાપતિ", "હિમાવાન", "વિશ્વામિત્ર"]
+                }
+            },
+            "60": {
+                "question": "Mata Parvati na purvajanm nu nam su hatu?",
+                "options": ["Sati", "Ganga", "Uma", "Anusuya"],
+                "answer": 0,
+                "gujarati": {
+                    "question": "માતા પાર્વતીના પૂર્વજન્મનું નામ શું હતુ?",
+                    "options": ["સતી", "ગંગા", "ઉમા", "અનુસુયા"]
+                }
+            },
+            "61": {
+                "question": "Mata Parvati e kay gufa ma tapasya kari hati?",
+                "options": ["Amarnath Gufa", "Manikarnika Gufa", "Gauri Gufa", "Vaishno Devi Gufa"],
+                "answer": 2,
+                "gujarati": {
+                    "question": "માતા પાર્વતી એ કઈ ગુફામાં તપસ્યા કરી હતી?",
+                    "options": ["અમરનાથ ગુફા", "મણિકર્ણિકા ગુફા", "ગૌરી ગુફા", "વૈષ્ણો દેવી ગુફા"]
+                }
+            },
+            "62": {
+                "question": "Shri Ram kay vansh na hataa?",
+                "options": ["Ikshvaku Vansh", "Yadu Vansh", "Chandravansh", "Raghu Vansh"],
+                "answer": 3,
+                "gujarati": {
+                    "question": "શ્રી રામ કયા વંશના હતા?",
+                    "options": ["ઇક્ષ્વાકુ વંશ", "યદુ વંશ", "ચંદ્રવંશ", "રઘુ વંશ"]
+                }
+            },
+            "63": {
+                "question": "Shri Ram na pita nu naam su hatu?",
+                "options": ["Dasharath", "Janak", "Dushyant", "Bharat"],
+                "answer": 0,
+                "gujarati": {
+                    "question": "શ્રી રામના પિતાનું નામ શું હતુ?",
+                    "options": ["દશરથ", "જનક", "દુશ્યંત", "ભરત"]
+                }
+            },
+            "64": {
+                "question": "Shri Ram ni mata nu naam su hatu?",
+                "options": ["Kaikeyi", "Sumitra", "Kaushalya", "Mandodari"],
+                "answer": 2,
+                "gujarati": {
+                    "question": "શ્રી રામની માતાનું નામ શું હતુ?",
+                    "options": ["કૈકેયી", "સુમિત્રા", "કૌશલ્યા", "મંદોદરી"]
+                }
+            },
+            "65": {
+                "question": "Mata Sita na pita nu naam su hatu?",
+                "options": ["Vishwamitra", "Janak", "Dronacharya", "Shantanu"],
+                "answer": 1,
+                "gujarati": {
+                    "question": "માતા સીતાના પિતાનું નામ શું હતુ?",
+                    "options": ["વિશ્વામિત્ર", "જનક", "દ્રોણાચાર્ય", "શાંતનુ"]
+                }
+            },
+            "66": {
+                "question": "Ramayan pramane Shri Ram ketla varsh na vanvas ma gaya hata?",
+                "options": ["12 varsh", "10 varsh", "14 varsh", "16 varsh"],
+                "answer": 2,
+                "gujarati": {
+                    "question": "રામાયણ પ્રમાણે શ્રી રામ કેટલા વર્ષના વનવાસમાં ગયા હતા?",
+                    "options": ["12 વર્ષ", "10 વર્ષ", "14 વર્ષ", "16 વર્ષ"]
+                }
+            },
+            "67": {
+                "question": "Shri Ram e Lanka jita pachi konne rajya sopi didhu?",
+                "options": ["Hanuman", "Vibhishan", "Angad", "Sugriv"],
+                "answer": 1,
+                "gujarati": {
+                    "question": "શ્રી રામ એ લંકા જીત પછી કોને રાજ્ય સોપી દીધુ?",
+                    "options": ["હનુમાન", "વિભીષણ", "અંગદ", "સુગ્રીવ"]
+                }
+            },
+            "68": {
+                "question": "Shri Ram na ketla bhai hata?",
+                "options": ["2", "3", "4", "5"],
+                "answer": 1,
+                "gujarati": {
+                    "question": "શ્રી રામના કેટલા ભાઈ હતા?",
+                    "options": ["2", "3", "4", "5"]
+                }
+            },
+            "69": {
+                "question": "Lakshman ni patni nu nam su hatu?",
+                "options": ["Mandavi", "Urmila", "Shrutakirti", "Sumitra"],
+                "answer": 1,
+                "gujarati": {
+                    "question": "લક્ષ્મણની પત્નીનું નામ શું હતુ?",
+                    "options": ["માંડવી", "ઊર્મિલા", "શ્રુતકીર્તિ", "સુમિત્રા"]
+                }
+            },
+            "70": {
+                "question": "Sita Mata ne Ravan ve kay van ma Haran karya hata?",
+                "options": ["Dandakaranya", "Chitrakoot", "Panchavati", "Rameshwaram"],
+                "answer": 2,
+                "gujarati": {
+                    "question": "સીતા માતાને રાવણ વે કયા વનમાં હરણ કર્યા હતા?",
+                    "options": ["દંડકારણ્ય", "ચિત્રકૂટ", "પંચવટી", "રામેશ્વરમ"]
+                }
+            },
+            "71": {
+                "question": "Shri Ram ne Bharat kyare bhet karya hata?",
+                "options": ["Lanka Vijay pachi", "Vanvas doraan Chitrakoot ma", "Janakpur yatra ma", "Ayodhya pravesh na divas"],
+                "answer": 1,
+                "gujarati": {
+                    "question": "શ્રી રામને ભરત ક્યારે ભેટ કર્યા હતા?",
+                    "options": ["લંકા વિજય પછી", "વનવાસ દરમ્યાન ચિત્રકૂટમાં", "જનકપુર યાત્રામાં", "અયોધ્યા પ્રવેશના દિવસ"]
+                }
+            },
+            "72": {
+                "question": "Ramayan pramane Hanuman e Lanka ma kay rani no nash karyo hato?",
+                "options": ["Mandodari", "Trijata", "Surasa", "Lankini"],
+                "answer": 3,
+                "gujarati": {
+                    "question": "રામાયણ પ્રમાણે હનુમાન એ લંકામાં કયા રાણીનો નાશ કર્યો હતો?",
+                    "options": ["મંદોદરી", "ત્રિજટા", "સુરસા", "લંકિની"]
+                }
+            },
+            "73": {
+                "question": "Ramayan anusar mata Sumitra na putra nu nam su hatu?",
+                "options": ["Ram", "Bharat", "Lakshman", "Nakul"],
+                "answer": 2,
+                "gujarati": {
+                    "question": "રામાયણ અનુસાર માતા સુમિત્રાના પુત્રનું નામ શું હતુ?",
+                    "options": ["રામ", "ભરત", "લક્ષ્મણ", "નકુલ"]
+                }
+            },
+            "74": {
+                "question": "Ravan ne kona shrap na karane Lanka nu naash thayu hatu?",
+                "options": ["Narad Muni no shrap", "Brahma no shrap", "Nandi no shrap", "Vishwamitra no shrap"],
+                "answer": 2,
+                "gujarati": {
+                    "question": "રાવણને કોના શ્રાપના કારણે લંકાનો નાશ થયો હતો?",
+                    "options": ["નારદ મુનિનો શ્રાપ", "બ્રહ્માનો શ્રાપ", "નંદીનો શ્રાપ", "વિશ્વામિત્રનો શ્રાપ"]
+                }
+            },
+            "75": {
+                "question": "Shri Ram e Lanka Vijay pachi kay bhagwan ni puja kari hati?",
+                "options": ["Vishnu", "Shiva", "Brahma", "Surya"],
+                "answer": 1,
+                "gujarati": {
+                    "question": "શ્રી રામ એ લંકા વિજય પછી કયા ભગવાનની પૂજા કરી હતી?",
+                    "options": ["વિષ્ણુ", "શિવ", "બ્રહ્મા", "સૂર્ય"]
+                }
+            }
+        };
+
+        const letters = ['A', 'B', 'C', 'D'];
+        let timer;
+        const input = document.getElementById('questionNum');
+        const questionText = document.getElementById('questionText');
+        const optionsContainer = document.getElementById('optionsContainer');
+        const feedbackContainer = document.getElementById('feedbackContainer');
+        const timerDisplay = document.getElementById('timer');
+
+        input.addEventListener('keypress', (e) => {
+            if(e.key === 'Enter') {
+                const qNum = parseInt(input.value);
+                if(qNum in questions) {
+                    showQuestion(qNum);
+                    startTimer();
+                } else {
+                    questionText.textContent = "Question not found!";
+                    optionsContainer.innerHTML = "";
+                }
+            }
+        });
+
+        function showQuestion(num) {
+            const q = questions[num];
+            let displayQuestion, displayOptions;
+            
+            if (currentLanguage === 'gujarati' && q.gujarati) {
+                displayQuestion = q.gujarati.question;
+                displayOptions = q.gujarati.options;
+            } else if (currentLanguage === 'romanized' && q.romanized) {
+                displayQuestion = q.romanized.question;
+                displayOptions = q.romanized.options;
+            } else {
+                displayQuestion = q.question;
+                displayOptions = q.options;
+            }
+            
+            questionText.textContent = displayQuestion;
+            
+            optionsContainer.innerHTML = displayOptions.map((option, index) => `
+                <div class="option" onclick="checkAnswer(${index}, ${q.answer})">
+                    <span class="option-letter">${letters[index]}</span>
+                    <span class="option-text">${option}</span>
+                </div>
+            `).join('');
+            
+            feedbackContainer.innerHTML = "";
+        }
+
+        function startTimer() {
+            let timeLeft = 30;
+            updateTimerDisplay(timeLeft);
+            
+            timer = setInterval(() => {
+                timeLeft--;
+                updateTimerDisplay(timeLeft);
+                
+                if(timeLeft <= 0) {
+                    clearInterval(timer);
+                    feedbackContainer.innerHTML = "<div style='color: #e94560; font-weight: bold;'>Time's up!</div>";
+                    disableAllOptions();
+                }
+            }, 1000);
+        }
+
+        function updateTimerDisplay(time) {
+            timerDisplay.textContent = time;
+        }
+
+        function disableAllOptions() {
+            const options = document.querySelectorAll('.option');
+            options.forEach(opt => {
+                opt.style.pointerEvents = 'none';
+            });
+        }
+
+        function checkAnswer(selected, correct) {
+            const options = document.querySelectorAll('.option');
+            const selectedOption = options[selected];
+            
+            if (selected === correct) {
+                correctSound.play();
+                clearInterval(timer);
+                disableAllOptions();
+                selectedOption.classList.add('correct-highlight');
+                
+                confetti({
+                    particleCount: 150,
+                    spread: 100,
+                    origin: { y: 0.6 },
+                    colors: ['#4CAF50', '#45a049', '#3d8b40']
+                });
+            } else {
+                wrongSound.play();
+                selectedOption.classList.add('wrong-answer');
+                selectedOption.style.pointerEvents = 'none';
+                
+                const thumbsDown = document.createElement('div');
+                thumbsDown.className = 'thumbs-down-animation';
+                thumbsDown.innerHTML = '👎';
+                feedbackContainer.appendChild(thumbsDown);
+                
+                setTimeout(() => thumbsDown.remove(), 1000);
+            }
+        }
+
+        // Team System
         let teams = [];
         let nextTeamId = 1;
 
@@ -334,478 +1183,8 @@
         }
 
         // Initialize with 2 teams
-        addTeam();
-        addTeam();
-
-        // Quiz functionality
-        const questions = {
-    "1": {
-      "question": "Bhagwan Krishna nu janm kyā thayu hatu?",
-      "options": ["Mathura", "Dwarka", "Gokul", "Vrindavan"],
-      "answer": 0
-    },
-    "2": {
-      "question": "Kans na keṭla bhai-baheno hata je Krishna na shatrupanu karata hata?",
-      "options": ["2", "4", "6", "8"],
-      "answer": 3
-    },
-    "3": {
-      "question": "Bhagwan Krishna na pita Vasudev kyā vansh na hata?",
-      "options": ["Yadu Vansh", "Ikshvaku Vansh", "Haihay Vansh", "Puru Vansh"],
-      "answer": 0
-    },
-    "4": {
-      "question": "Kans e Devki na ketla santano ne maari nakhya hata?",
-      "options": ["4", "6", "7", "8"],
-      "answer": 1
-    },
-    "5": {
-      "question": "Krishna e kai daitya stri ne mari ne Gokul ne bachavyu hatu?",
-      "options": ["Holika", "Putana", "Trijata", "Surpanakha"],
-      "answer": 1
-    },
-    "6": {
-      "question": "Kansa ne maarva pachi Krishna e kyā raja nu takht sambharyu hatu?",
-      "options": ["Mathura", "Dwarka", "Indraprastha", "Hastinapur"],
-      "answer": 0
-    },
-    "7": {
-      "question": "Bhagwan Krishna e Govardhan Parvat kyā divas ughami rakhyo hato?",
-      "options": ["3 divas", "5 divas", "7 divas", "9 divas"],
-      "answer": 2
-    },
-    "8": {
-      "question": "Rukmini e Krishna ne kyā thi bhagavi ne lagan karyu hatu?",
-      "options": ["Vidarbha", "Mathura", "Dwarka", "Hastinapur"],
-      "answer": 0
-    },
-    "9": {
-      "question": "Bhagwan Krishna e Mahabharat na yuddh ma Arjun ne kyā updesh aapyo hato?",
-      "options": ["Vishnu Puran", "Bhagavad Gita", "Srimad Bhagavatam", "Yajur Veda"],
-      "answer": 1
-    },
-    "10": {
-      "question": "Krishna e kai rani saathe sathvaro (Raas Leela) vadhare karyo hato?",
-      "options": ["Rukmini", "Satyabhama", "Radha", "Jambvati"],
-      "answer": 2
-    },
-    "11": {
-      "question": "Vishnu Puran ma ketla adhyaay che?",
-      "options": ["50", "100", "126", "200"],
-      "answer": 2
-    },
-    "12": {
-      "question": "Vishnu Puran pramane kayu yug lamboo che?",
-      "options": ["Kali Yug", "Treta Yug", "Dwapar Yug", "Satya Yug"],
-      "answer": 3
-    },
-    "13": {
-      "question": "Kali Yug na antim samay ma Vishnu bhagwan no kayu avatar aavshe?",
-      "options": ["Matsya", "Kalki", "Ram", "Krishna"],
-      "answer": 1
-    },
-    "14": {
-      "question": "Vishnu Bhagwan ni patni kon che?",
-      "options": ["Saraswati", "Parvati", "Lakshmi", "Radha"],
-      "answer": 2
-    },
-    "15": {
-      "question": "Vishnu Bhagwan ye varaha avatar ma kaya rakshas ne maaro hato?",
-      "options": ["Hiranyakashipu", "Hiranyaksha", "Ravan", "Kumbhakarna"],
-      "answer": 1
-    },
-    "16": {
-      "question": "Vishnu Puran sathe, total ketla Puran che?",
-      "options": ["10", "12", "18", "24"],
-      "answer": 2
-    },
-    "17": {
-      "question": "Vishnu Puran na rachayita kon che?",
-      "options": ["Narad", "Veda Vyaas", "Valmiki", "Agastya"],
-      "answer": 1
-    },
-    "18": {
-      "question": "Aa ma thi kayu Vishnu Bhagwan nu avatar nathi?",
-      "options": ["Vaman", "Buddha", "Kurma", "Hanuman"],
-      "answer": 3
-    },
-    "19": {
-      "question": "Vishnu Puran anusar kay nadi vadhare pavitra che?",
-      "options": ["Saraswati", "Ganga", "Yamuna", "Narmada"],
-      "answer": 1
-    },
-    "20": {
-      "question": "Vishnu Puran anusar Vishnu Bhagwan kaya yug ma Prithvi par Krishna avatar ma avya hata?",
-      "options": ["Treta Yug", "Dwapar Yug", "Satya Yug", "Kali Yug"],
-      "answer": 1
-    },
-    "21": {
-      "question": "Vishnu Puran pramane Bhagwan Vishnu nu asli nivas kya che?",
-      "options": ["Kailas Parvat", "Vaikunth", "Swarg Lok", "Brahmalok"],
-      "answer": 1
-    },
-    "22": {
-      "question": "Kans ne kay rishi dwara aashirvaad ma shraap malyo hato?",
-      "options": ["Garg Rishi", "Narad Muni", "Durvasa Rishi", "Akashvani (divya aawaz)"],
-      "answer": 3
-    },
-    "23": {
-      "question": "Krishna Bhagwan ne kyun mata ne garbh ma janm lidho?",
-      "options": ["Mata Yashoda", "Mata Kunti", "Mata Devaki", "Mata Rohini"],
-      "answer": 2
-    },
-    "24": {
-      "question": "Kans e Krishna Bhagwan ne maarva mate kay rakshaso ne mokalya hata?",
-      "options": ["Putana", "Trinavarta", "Bakasur", "Aakhana badha (all of the above)"],
-      "answer": 3
-    },
-    "25": {
-      "question": "Krishna Bhagwan e Gokul ma kay rashi upar naach karyo hato?",
-      "options": ["Mor pankh", "Kalindi nadi", "Kaliya naag na mastak par", "Govardhan parvat par"],
-      "answer": 2
-    },
-    "26": {
-      "question": "Krishna Bhagwan e kay parvat ne ungli par uthavyo hato?",
-      "options": ["Kailas parvat", "Himalaya", "Govardhan parvat", "Vindhyachal"],
-      "answer": 2
-    },
-    "27": {
-      "question": "Krishna Bhagwan no saacho mitra kayu hato?",
-      "options": ["Balram", "Sudama", "Arjun", "Uddhav"],
-      "answer": 1
-    },
-    "28": {
-      "question": "Krishna Bhagwan ni Rasa-Leela kyare varnit thai chhe?",
-      "options": ["Krishna na balpan ma", "Yuvavastha ma", "Vanvaas ma", "Mahabharat yuddh pachi"],
-      "answer": 0
-    },
-    "29": {
-      "question": "Krishna Bhagwan e Dwarika ni sthapna kyare kari?",
-      "options": ["Kansa ne maarva pachi", "Govardhan puja pachi", "Putana ne maarva pachi", "Mahabharat yuddh ni shuruaat ma"],
-      "answer": 0
-    },
-    "30": {
-      "question": "Matsya avatar ma Bhagwan e kyane raksha kari hati?",
-      "options": ["Manu ane vedo", "Raja Bali", "Prithvi Devi", "Gajendra"],
-      "answer": 0
-    },
-    "31": {
-      "question": "Kurma avatar ma Bhagwan e kay kriya ma sahay kari hati?",
-      "options": ["Yagna", "Amrut manthan", "Tapasya", "Daan"],
-      "answer": 1
-    },
-    "32": {
-      "question": "Varaha avatar ma Bhagwan e Prithvi ne kyathi bachavi hati?",
-      "options": ["Ksheer Sagar maathi", "Pataal maathi", "Himalaya par", "Brahmand maathi"],
-      "answer": 1
-    },
-    "33": {
-      "question": "Narasimha avatar ma Bhagwan e kay raja ne maaro hato?",
-      "options": ["Hiranyakashyap", "Ravana", "Kans", "Duryodhan"],
-      "answer": 0
-    },
-    "34": {
-      "question": "Vaman avatar ma Bhagwan e kay raja ne teen pag ma naapyo hato?",
-      "options": ["Raja Bali", "Raja Harishchandra", "Raja Parikshit", "Raja Janak"],
-      "answer": 0
-    },
-    "35": {
-      "question": "Parshuram avatar e kay shastra dharan karyu hatu?",
-      "options": ["Trishul", "Talwar", "Parshu (kulhadi)", "Dhanush"],
-      "answer": 2
-    },
-    "36": {
-      "question": "Ram avatar ma Bhagwan ni patni nu naam shu hatu?",
-      "options": ["Radha", "Draupadi", "Sita", "Rukmini"],
-      "answer": 2
-    },
-    "37": {
-      "question": "Krishna avatar ma Bhagwan na pehla bhai nu naam shu hatu?",
-      "options": ["Sheshnag", "Balram", "Uddhav", "Sudama"],
-      "answer": 1
-    },
-    "38": {
-      "question": "Buddha avatar ma Bhagwan Vishnu e su sandesh aapyo hato?",
-      "options": ["Karm karo", "Satya no paath", "Ahinsa ane daya", "Shakti aradhana"],
-      "answer": 2
-    },
-    "39": {
-      "question": "Kalki avatar kyare aavshe?",
-      "options": ["Satya Yug", "Treta Yug", "Dwapar Yug", "Kaliyug na ant ma"],
-      "answer": 3
-    },
-    "40": {
-      "question": "ગણેશ ચતુર્થી કયા ભગવાનનો જન્મોત્સવ છે?",
-      "options": ["વિષ્ણુ", "શિવ", "ગણેશ", "હનુમાન"],
-      "answer": 2
-    },
-    "41": {
-      "question": "ગણેશજીના માતા-પિતા કોણ છે?",
-      "options": ["શિવ અને પાર્વતી", "વિષ્ણુ અને લક્ષ્મી", "બ્રહ્મા અને સરસ્વતી", "ઇન્દ્ર અને અહલ્યા"],
-      "answer": 0
-    },
-    "42": {
-      "question": "ગણેશજીનો વાહન કયો છે?",
-      "options": ["હાથી", "મોષક", "સિંહ", "ઉંટ"],
-      "answer": 1
-    },
-    "43": {
-      "question": "ગણેશ ચતુર્થીને બીજા ક્યા નામથી ઓળખાય છે?",
-      "options": ["વિનાયક ચતુર્થી", "શિવરાત્રિ", "હનુમાન જયંતી", "કૃષ્ણાષ્ટમી"],
-      "answer": 0
-    },
-    "44": {
-      "question": "ગણેશજીને કઈ મીઠાઈ પ્રિય છે?",
-      "options": ["લાડુ", "જલેબી", "રસ્મલાઈ", "પેડા"],
-      "answer": 0
-    },
-    "45": {
-      "question": "ગણેશજીને કઈ મૂર્ખતા માટે પ્રસિદ્ધ છે?",
-      "options": ["બુદ્ધિ અને જ્ઞાન", "યોદ્ધા શક્તિ", "નૃત્ય", "સંગીત"],
-      "answer": 0
-    },
-    "46": {
-      "question": "ગણેશ ચતુર્થીનો તહેવાર મુખ્યત્વે ક્યાં ઉજવાય છે?",
-      "options": ["ગુજરાત", "મહારાષ્ટ્ર", "પંજાબ", "તામિલનાડુ"],
-      "answer": 1
-    },
-    "47": {
-      "question": "ગણેશજીના ભાઈનું નામ શું છે?",
-      "options": ["કાર્તિકેય", "ભદ્રકાલી", "રામ", "હનુમાન"],
-      "answer": 0
-    },
-    "48": {
-      "question": "ગણેશ ચતુર્થી કેટલા દિવસ સુધી ઉજવાય છે?",
-      "options": ["1 દિવસ", "5 દિવસ", "10 દિવસ", "15 દિવસ"],
-      "answer": 2
-    },
-    "49": {
-      "question": "ગણેશ ચતુર્થીનો સમાપન કયા દિવસ થાય છે?",
-      "options": ["હોળી", "દશેરા", "અનંત ચતુર્દશી", "દિવાળી"],
-      "answer": 2
-    },
-    "50": {
-      "question": "Shiv Puran pramane kay lok ma Shiv Bhagwan nivas kare che?",
-      "options": ["Swarg", "Patal", "Kailash", "Vaikunth"],
-      "answer": 2
-    },
-    "51": {
-      "question": "Shiv Puran pramane kay raja Shiv Bhagwan na bhakt hata?",
-      "options": ["Harishchandra", "Dasharath", "Chandragupt", "Ravana"],
-      "answer": 3
-    },
-    "52": {
-      "question": "Shiv Puran anusar Shiv Bhagwan ni kay shivling Jyotirling manvama ave che?",
-      "options": ["Gangeshwar", "Kedareshwar", "Mallikarjun", "Krishneshwar"],
-      "answer": 2
-    },
-    "53": {
-      "question": "Shiv Puran anusar Nandi na pita nu nam su che?",
-      "options": ["Vasishtha Rushi", "Shilad Rushi", "Kashyap Rushi", "Atri Rushi"],
-      "answer": 1
-    },
-    "54": {
-      "question": "Bhawan Shiv na ketla nam che?",
-      "options": ["108", "125", "1000", "1008"],
-      "answer": 0
-    },
-    "55": {
-      "question": "Bhawan Shiv ni Jhata ma kono vas che?",
-      "options": ["Narmada", "Saraswati", "Ganga", "Yamuna"],
-      "answer": 2
-    },
-    "56": {
-      "question": "Shiv Bhagwan ni puja ma kay vastu nathi vaprati?",
-      "options": ["Chandan", "Tulsi", "Dudh", "Bilipatra"],
-      "answer": 1
-    },
-    "57": {
-      "question": "Mata Sati na ant pasi Shiv bhagwan ve krodh ma avi ne kayu roop dharan karelu?",
-      "options": ["Bhairav", "Veerabhadra", "Natraj", "Durvasa"],
-      "answer": 1
-    },
-    "58": {
-      "question": "Maa Ganga ne swarglok mathi pruthvi par kon lavyu hatu?",
-      "options": ["Mahadev", "Bhagirath", "Brahmadev", "Narad muni"],
-      "answer": 1
-    },
-    "59": {
-      "question": "Mata Parvati na pita nu nam su hatu?",
-      "options": ["Kashyap Rushi", "Daksha Prajapati", "Himavan", "Vishwamitra"],
-      "answer": 2
-    },
-    "60": {
-      "question": "Mata Parvati na purvajanm nu nam su hatu?",
-      "options": ["Sati", "Ganga", "Uma", "Anusuya"],
-      "answer": 0
-    },
-    "61": {
-      "question": "Mata Parvati e kay gufa ma tapasya kari hati?",
-      "options": ["Amarnath Gufa", "Manikarnika Gufa", "Gauri Gufa", "Vaishno Devi Gufa"],
-      "answer": 2
-    },
-    "62": {
-      "question": "Shri Ram kay vansh na hataa?",
-      "options": ["Ikshvaku Vansh", "Yadu Vansh", "Chandravansh", "Raghu Vansh"],
-      "answer": 3
-    },
-    "63": {
-      "question": "Shri Ram na pita nu naam su hatu?",
-      "options": ["Dasharath", "Janak", "Dushyant", "Bharat"],
-      "answer": 0
-    },
-    "64": {
-      "question": "Shri Ram ni mata nu naam su hatu?",
-      "options": ["Kaikeyi", "Sumitra", "Kaushalya", "Mandodari"],
-      "answer": 2
-    },
-    "65": {
-      "question": "Mata Sita na pita nu naam su hatu?",
-      "options": ["Vishwamitra", "Janak", "Dronacharya", "Shantanu"],
-      "answer": 1
-    },
-    "66": {
-      "question": "Ramayan pramane Shri Ram ketla varsh na vanvas ma gaya hata?",
-      "options": ["12 varsh", "10 varsh", "14 varsh", "16 varsh"],
-      "answer": 2
-    },
-    "67": {
-      "question": "Shri Ram e Lanka jita pachi konne rajya sopi didhu?",
-      "options": ["Hanuman", "Vibhishan", "Angad", "Sugriv"],
-      "answer": 1
-    },
-    "68": {
-      "question": "Shri Ram na ketla bhai hata?",
-      "options": ["2", "3", "4", "5"],
-      "answer": 1
-    },
-    "69": {
-      "question": "Lakshman ni patni nu nam su hatu?",
-      "options": ["Mandavi", "Urmila", "Shrutakirti", "Sumitra"],
-      "answer": 1
-    },
-    "70": {
-      "question": "Sita Mata ne Ravan ve kay van ma Haran karya hata?",
-      "options": ["Dandakaranya", "Chitrakoot", "Panchavati", "Rameshwaram"],
-      "answer": 2
-    },
-    "71": {
-      "question": "Shri Ram ne Bharat kyare bhet karya hata?",
-      "options": ["Lanka Vijay pachi", "Vanvas doraan Chitrakoot ma", "Janakpur yatra ma", "Ayodhya pravesh na divas"],
-      "answer": 1
-    },
-    "72": {
-      "question": "Ramayan pramane Hanuman e Lanka ma kay rani no nash karyo hato?",
-      "options": ["Mandodari", "Trijata", "Surasa", "Lankini"],
-      "answer": 3
-    },
-    "73": {
-      "question": "Ramayan anusar mata Sumitra na putra nu nam su hatu?",
-      "options": ["Ram", "Bharat", "Lakshman", "Nakul"],
-      "answer": 2
-    },
-    "74": {
-      "question": "Ravan ne kona shrap na karane Lanka nu naash thayu hatu?",
-      "options": ["Narad Muni no shrap", "Brahma no shrap", "Nandi no shrap", "Vishwamitra no shrap"],
-      "answer": 2
-    },
-    "75": {
-      "question": "Shri Ram e Lanka Vijay pachi kay bhagwan ni puja kari hati?",
-      "options": ["Vishnu", "Shiva", "Brahma", "Surya"],
-      "answer": 1
-    }
-  };
-
-        const letters = ['A', 'B', 'C', 'D'];
-        let timer;
-        const input = document.getElementById('questionNum');
-        const questionText = document.getElementById('questionText');
-        const optionsContainer = document.getElementById('optionsContainer');
-        const feedbackContainer = document.getElementById('feedbackContainer');
-        const timerDisplay = document.getElementById('timer');
-
-        input.addEventListener('keypress', (e) => {
-            if(e.key === 'Enter') {
-                const qNum = parseInt(input.value);
-                if(qNum in questions) {
-                    showQuestion(qNum);
-                    startTimer();
-                } else {
-                    questionText.textContent = "Question not found!";
-                    optionsContainer.innerHTML = "";
-                }
-            }
-        });
-
-        function showQuestion(num) {
-            const q = questions[num];
-            questionText.textContent = q.question;
-            
-            optionsContainer.innerHTML = q.options.map((option, index) => `
-                <div class="option" onclick="checkAnswer(${index}, ${q.answer})">
-                    <span class="option-letter">${letters[index]}</span>
-                    <span class="option-text">${option}</span>
-                </div>
-            `).join('');
-            
-            feedbackContainer.innerHTML = "";
-        }
-
-        function startTimer() {
-            let timeLeft = 30;
-            updateTimerDisplay(timeLeft);
-            
-            timer = setInterval(() => {
-                timeLeft--;
-                updateTimerDisplay(timeLeft);
-                
-                if(timeLeft <= 0) {
-                    clearInterval(timer);
-                    feedbackContainer.innerHTML = "<div style='color: #e94560; font-weight: bold;'>Time's up!</div>";
-                    disableAllOptions();
-                }
-            }, 1000);
-        }
-
-        function updateTimerDisplay(time) {
-            timerDisplay.textContent = time;
-        }
-
-        function disableAllOptions() {
-            const options = document.querySelectorAll('.option');
-            options.forEach(opt => {
-                opt.style.pointerEvents = 'none';
-            });
-        }
-
-        function checkAnswer(selected, correct) {
-            const options = document.querySelectorAll('.option');
-            const selectedOption = options[selected];
-            
-            if (selected === correct) {
-                clearInterval(timer);
-                disableAllOptions();
-                selectedOption.classList.add('correct-highlight');
-                
-                confetti({
-                    particleCount: 150,
-                    spread: 100,
-                    origin: { y: 0.6 },
-                    colors: ['#4CAF50', '#45a049', '#3d8b40']
-                });
-            } else {
-                // Mark wrong answer in red but keep other options enabled
-                selectedOption.classList.add('wrong-answer');
-                selectedOption.style.pointerEvents = 'none'; // Disable this wrong option
-                
-                const thumbsDown = document.createElement('div');
-                thumbsDown.className = 'thumbs-down-animation';
-                thumbsDown.innerHTML = '👎';
-                feedbackContainer.appendChild(thumbsDown);
-                
-                setTimeout(() => thumbsDown.remove(), 1000);
-            }
-        }
+        addTeam('Team 1');
+        addTeam('Team 2');
     </script>
 </body>
 </html>
