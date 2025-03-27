@@ -99,22 +99,30 @@
             flex-shrink: 0;
         }
 
-        /* Timer style */
-        #timer {
-            position: absolute;
-            top: 20px;
-            right: 20px;
-            background: #e94560;
-            width: 60px;
-            height: 60px;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 1.8em;
-            font-weight: bold;
-            box-shadow: 0 0 0 5px rgba(233, 69, 96, 0.3);
-        }
+        /* Progress bar timer styles */
+.timer-container {
+    width: 100%;
+    background-color: rgba(0, 0, 0, 0.3);
+    border-radius: 10px;
+    margin: 0 auto 30px;
+    padding: 5px;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+}
+
+.timer-progress {
+    height: 20px;
+    border-radius: 8px;
+    background: linear-gradient(90deg, #4CAF50, #8BC34A);
+    width: 100%;
+    transition: width 1s linear;
+}
+
+.timer-text {
+    text-align: center;
+    font-weight: bold;
+    margin-top: 5px;
+    color: var(--highlight);
+}
 
         /* Scoring system styles */
         .scoring-section {
@@ -318,7 +326,10 @@
 
         <div class="quiz-section">
             <input type="number" id="questionNum" placeholder="Enter question number" min="1">
-            <div id="timer"></div>
+            <div class="timer-container">
+                <div id="timerProgress" class="timer-progress"></div>
+                <div id="timerText" class="timer-text">30s</div>
+            </div>
             <div class="question-display" id="questionText"></div>
             <div class="options-grid" id="optionsContainer"></div>
             <div id="feedbackContainer"></div>
@@ -1082,24 +1093,33 @@
         }
 
         function startTimer() {
-            let timeLeft = 30;
-            updateTimerDisplay(timeLeft);
-            
-            timer = setInterval(() => {
-                timeLeft--;
-                updateTimerDisplay(timeLeft);
-                
-                if(timeLeft <= 0) {
-                    clearInterval(timer);
-                    feedbackContainer.innerHTML = "<div style='color: #e94560; font-weight: bold;'>Time's up!</div>";
-                    disableAllOptions();
-                }
-            }, 1000);
+    let timeLeft = 30;
+    updateTimerDisplay(timeLeft);
+    
+    timer = setInterval(() => {
+        timeLeft--;
+        updateTimerDisplay(timeLeft);
+        
+        if(timeLeft <= 0) {
+            clearInterval(timer);
+            feedbackContainer.innerHTML = "<div style='color: #e94560; font-weight: bold;'>Time's up!</div>";
+            disableAllOptions();
         }
+    }, 1000);
+}
 
-        function updateTimerDisplay(time) {
-            timerDisplay.textContent = time;
-        }
+function updateTimerDisplay(time) {
+    const progress = (time / 30) * 100;
+    document.getElementById('timerProgress').style.width = `${progress}%`;
+    document.getElementById('timerText').textContent = `${time}s`;
+    
+    // Change color when time is running low
+    if(time <= 10) {
+        document.getElementById('timerProgress').style.background = 'linear-gradient(90deg, #f44336, #ff9800)';
+    } else {
+        document.getElementById('timerProgress').style.background = 'linear-gradient(90deg, #4CAF50, #8BC34A)';
+    }
+}
 
         function disableAllOptions() {
             const options = document.querySelectorAll('.option');
