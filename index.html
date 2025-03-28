@@ -34,6 +34,7 @@
             padding: 20px;
         }
 
+        
         /* Quiz section */
         .quiz-section {
             position: relative;
@@ -325,7 +326,10 @@
         <h1>ॐ Jalaram Tirth Yatra Quiz ॐ</h1>
 
         <div class="quiz-section">
-            <input type="number" id="questionNum" placeholder="Enter question number" min="1">
+            <div style="display: flex; gap: 10px;">
+                <input type="number" id="questionNum" placeholder="Enter question number" min="1" style="flex: 1; padding: 15px;">
+                <button onclick="loadQuestion()" style="padding: 0 20px; background: var(--primary); color: white; border: none; border-radius: 8px; cursor: pointer; font-size: 1em; height: 55px;">Enter</button>
+            </div>
             <div class="timer-container">
                 <div id="timerProgress" class="timer-progress"></div>
                 <div id="timerText" class="timer-text">30s</div>
@@ -353,6 +357,16 @@
             // This will be populated from the questions data
         };
 
+        function loadQuestion() {
+    const qNum = parseInt(document.getElementById('questionNum').value);
+    if (qNum in questions) {
+        showQuestion(qNum);
+        startTimer();
+    } else {
+        questionText.textContent = "Question not found!";
+        optionsContainer.innerHTML = "";
+    }
+}
         function toggleLanguage() {
             currentLanguage = currentLanguage === 'gujarati' ? 'romanized' : 'gujarati';
             document.getElementById('languageToggle').textContent = 
@@ -1053,17 +1067,8 @@
         const timerDisplay = document.getElementById('timer');
 
         input.addEventListener('keypress', (e) => {
-            if(e.key === 'Enter') {
-                const qNum = parseInt(input.value);
-                if(qNum in questions) {
-                    showQuestion(qNum);
-                    startTimer();
-                } else {
-                    questionText.textContent = "Question not found!";
-                    optionsContainer.innerHTML = "";
-                }
-            }
-        });
+    if(e.key === 'Enter') loadQuestion();
+});
 
         function showQuestion(num) {
             const q = questions[num];
